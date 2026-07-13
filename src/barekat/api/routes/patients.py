@@ -15,13 +15,19 @@ def list_patients(
     offset: int = Query(0, ge=0),
     user: dict = Depends(require_permission("read")),
 ):
+    from barekat.tenant.isolation import tenant_params
+
+    params = {**tenant_params(), "limit": limit, "offset": offset}
     with engine.connect() as conn:
-        total = conn.execute(text("SELECT COUNT(*) FROM raw.patients")).scalar()
+        total = conn.execute(
+            text("SELECT COUNT(*) FROM raw.patients WHERE tenant_id = :tenant_id"),
+            params,
+        ).scalar()
         rows = conn.execute(
-            text("SELECT * FROM raw.patients ORDER BY patient_id LIMIT :limit OFFSET :offset"),
-            {"limit": limit, "offset": offset},
+            text("SELECT * FROM raw.patients WHERE tenant_id = :tenant_id ORDER BY patient_id LIMIT :limit OFFSET :offset"),
+            params,
         ).mappings().all()
-    return {"total": total, "limit": limit, "offset": offset, "data": [dict(r) for r in rows]}
+    return {"total": total, "limit": limit, "offset": offset, "tenant_id": params["tenant_id"], "data": [dict(r) for r in rows]}
 
 
 @router.get("/{patient_id}")

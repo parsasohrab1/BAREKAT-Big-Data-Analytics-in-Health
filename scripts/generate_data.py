@@ -56,8 +56,10 @@ def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 150
             "Department": dept,
             "Admission_Type": np.random.choice(admission_types, p=[0.30, 0.40, 0.30]),
             "Length_of_Stay": (discharge_date - admission_date).days,
-            "ICU_Required": np.random.binomial(1, 0.15),
+            "ICU_Required": int(np.random.binomial(1, 0.15)),
             "Readmission_Flag": np.random.binomial(1, 0.10),
+            "Mortality_Flag": 0,
+            "Sepsis_Flag": 0,
         })
 
     admissions_df = pd.DataFrame(admissions_list)
@@ -134,12 +136,74 @@ def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 150
 
     lab_results_df = pd.DataFrame(lab_results_list)
 
+    # Outcome flags correlated with severity proxies
+    for idx, row in admissions_df.iterrows():
+        age = patients_df.loc[patients_df["Patient_ID"] == row["Patient_ID"], "Age"].iloc[0]
+        sepsis_p = 0.03 + 0.25 * row["ICU_Required"] + (0.08 if age > 70 else 0)
+        mortality_p = 0.01 + 0.20 * row["ICU_Required"] + 0.15 * sepsis_p + (0.05 if age > 80 else 0)
+        admissions_df.at[idx, "Sepsis_Flag"] = int(np.random.binomial(1, min(sepsis_p, 0.6)))
+        admissions_df.at[idx, "Mortality_Flag"] = int(np.random.binomial(1, min(mortality_p, 0.4)))
+
+    # Clinical notes for NLP
+    note_templates = [
+        "Patient presents with {dx}. History of {comorbid}. Plan: monitor vitals, continue treatment.",
+        "Progress note: {dx} suspected. Vitals stable. Labs pending. Assessment per {dept} protocol.",
+        "یادداشت پزشک: بیمار با علائم {dx}. سابقه {comorbid}. نیاز به پایش علائم حیاتی.",
+    ]
+    comorbidities = ["hypertension", "diabetes", "COPD", "CKD", "obesity"]
+    notes_list = []
+    adm_diag = diagnoses_df.groupby("Admission_ID").first().reset_index()
+    for _, adm in admissions_df.iterrows():
+        dx_row = adm_diag[adm_diag["Admission_ID"] == adm["Admission_ID"]]
+        dx = dx_row["Diagnosis_Description"].iloc[0] if not dx_row.empty else "unspecified condition"
+        template = np.random.choice(note_templates)
+        note_text = template.format(
+            dx=dx.lower(),
+            comorbid=np.random.choice(comorbidities),
+            dept=adm["Department"],
+        )
+        notes_list.append({
+            "Note_ID": f"NT{str(len(notes_list)).zfill(6)}",
+            "Admission_ID": adm["Admission_ID"],
+            "Note_Type": np.random.choice(["progress", "admission", "discharge"]),
+            "Note_Text": note_text,
+            "Authored_At": adm["Admission_Date"] + timedelta(hours=int(np.random.randint(2, 48))),
+        })
+    clinical_notes_df = pd.DataFrame(notes_list)
+
+    # Vital signs time-series (every 4–8 hours during stay)
+    vitals_list = []
+    for _, adm in admissions_df.iterrows():
+        los = max(int(adm["Length_of_Stay"]), 1)
+        n_readings = min(int(np.random.randint(3, max(los * 3, 4))), 48)
+        base_hr = np.random.randint(65, 95)
+        sepsis = adm["Sepsis_Flag"]
+        for r in range(n_readings):
+            hr = base_hr + (np.random.randint(15, 35) if sepsis else np.random.randint(-10, 15))
+            temp = np.random.normal(37.8 if sepsis else 37.0, 0.4)
+            spo2 = np.random.randint(88, 99) if sepsis else np.random.randint(94, 100)
+            vitals_list.append({
+                "Vital_ID": f"VT{str(len(vitals_list)).zfill(7)}",
+                "Admission_ID": adm["Admission_ID"],
+                "Heart_Rate": int(np.clip(hr, 40, 160)),
+                "Respiratory_Rate": int(np.random.randint(18, 28) if sepsis else np.random.randint(12, 20)),
+                "Systolic_BP": int(np.random.randint(85, 110) if sepsis else np.random.randint(110, 140)),
+                "Diastolic_BP": int(np.random.randint(50, 75)),
+                "Temperature_C": round(float(np.clip(temp, 35.5, 40.5)), 1),
+                "SpO2": int(spo2),
+                "Lactate": round(float(np.random.normal(3.5, 1.0) if sepsis else np.random.normal(1.2, 0.4)), 2),
+                "Recorded_At": adm["Admission_Date"] + timedelta(hours=4 * r),
+            })
+    vital_signs_df = pd.DataFrame(vitals_list)
+
     return {
         "Patients": patients_df,
         "Admissions": admissions_df,
         "Diagnoses": diagnoses_df,
         "Medications": medications_df,
         "Lab_Results": lab_results_df,
+        "Clinical_Notes": clinical_notes_df,
+        "Vital_Signs": vital_signs_df,
     }
 
 
@@ -151,6 +215,8 @@ def save_to_csv(data: dict[str, pd.DataFrame], output_dir: Path) -> None:
         "Diagnoses": "diagnoses.csv",
         "Medications": "medications.csv",
         "Lab_Results": "lab_results.csv",
+        "Clinical_Notes": "clinical_notes.csv",
+        "Vital_Signs": "vital_signs.csv",
     }
     for table_name, filename in file_map.items():
         if table_name in data and not data[table_name].empty:

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0891B2"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>BAREKAT Mobile</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="brand">
+        <span class="logo">B</span>
+        <div>
+          <h1 id="tenant-name">BAREKAT</h1>
+          <p id="user-role">داشبورد موبایل</p>
+        </div>
+      </div>
+      <button id="btn-logout" class="icon-btn hidden" title="خروج">⎋</button>
+    </header>
+
+    <section id="login-screen" class="screen">
+      <div class="card login-card">
+        <h2>ورود</h2>
+        <label>نام کاربری<input id="username" type="text" autocomplete="username" placeholder="admin"/></label>
+        <label>رمز عبور<input id="password" type="password" autocomplete="current-password" placeholder="••••••"/></label>
+        <button id="btn-login" class="btn primary">ورود به داشبورد</button>
+        <p id="login-error" class="error hidden"></p>
+      </div>
+    </section>
+
+    <section id="dashboard-screen" class="screen hidden">
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi"><span id="kpi-admissions">—</span><small>بستری</small></div>
+        <div class="kpi"><span id="kpi-readmit">—</span><small>بستری مجدد %</small></div>
+        <div class="kpi critical"><span id="kpi-critical">—</span><small>هشدار بحرانی</small></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>هشدارهای فعال</h3>
+          <span id="alert-badge" class="badge">0</span>
+        </div>
+        <ul id="alert-list" class="alert-list"></ul>
+      </div>
+
+      <div class="card">
+        <h3>گزارش هفتگی</h3>
+        <p class="muted" id="report-period">—</p>
+        <div class="btn-row">
+          <a id="btn-excel" class="btn secondary" href="#" download>Excel</a>
+          <a id="btn-pdf" class="btn secondary" href="#" download>PDF</a>
+        </div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav hidden" id="bottom-nav">
+      <button class="nav-item active" data-tab="dashboard">خانه</button>
+      <button class="nav-item" data-tab="alerts">هشدارها</button>
+      <button class="nav-item" data-tab="reports">گزارش</button>
+    </nav>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

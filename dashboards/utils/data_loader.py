@@ -9,6 +9,7 @@ import pandas as pd
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "./data/raw"))
 MODELS_DIR = Path(os.getenv("MODELS_DIR", "./data/models"))
+DATA_SOURCE = os.getenv("DASHBOARD_DATA_SOURCE", os.getenv("DATA_SOURCE", "auto"))
 
 FILE_MAP = {
     "patients": "patients.csv",
@@ -25,7 +26,7 @@ DATE_COLUMNS = {
 }
 
 
-def load_raw_tables(data_dir: Path | None = None) -> dict[str, pd.DataFrame]:
+def _load_from_csv(data_dir: Path | None = None) -> dict[str, pd.DataFrame]:
     base = data_dir or DATA_DIR
     tables: dict[str, pd.DataFrame] = {}
     for name, filename in FILE_MAP.items():
@@ -35,6 +36,49 @@ def load_raw_tables(data_dir: Path | None = None) -> dict[str, pd.DataFrame]:
         parse_dates = DATE_COLUMNS.get(name)
         tables[name] = pd.read_csv(path, parse_dates=parse_dates)
     return tables
+
+
+def _load_from_postgres(tenant_id: str | None = None) -> dict[str, pd.DataFrame]:
+    from dashboards.utils.db_loader import load_tables_from_postgres
+
+    return load_tables_from_postgres(tenant_id)
+
+
+def resolve_data_source() -> str:
+    try:
+        from barekat.config.settings import get_settings
+        source = get_settings().dashboard_data_source.lower()
+    except Exception:
+        source = DATA_SOURCE.lower()
+
+    if source in ("postgres", "csv"):
+        return source
+
+    try:
+        from dashboards.utils.db_loader import postgres_available, postgres_has_data
+
+        if postgres_available() and postgres_has_data():
+            return "postgres"
+    except Exception:
+        pass
+    return "csv"
+
+
+def load_raw_tables(data_dir: Path | None = None, tenant_id: str | None = None) -> dict[str, pd.DataFrame]:
+    """Load health tables from PostgreSQL (post-ETL) or CSV fallback."""
+    source = resolve_data_source()
+    if source == "postgres":
+        try:
+            tables = _load_from_postgres(tenant_id)
+            if tables:
+                return tables
+        except Exception:
+            pass
+    return _load_from_csv(data_dir)
+
+
+def get_active_data_source() -> str:
+    return resolve_data_source()
 
 
 def build_master_admissions(data: dict[str, pd.DataFrame]) -> pd.DataFrame:

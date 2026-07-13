@@ -1,0 +1,3 @@
+# TLS certificates — use generate_tls_certs.sh or real certs in production
+*
+!.gitignore

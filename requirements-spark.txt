@@ -1,0 +1,6 @@
+# Optional Spark + Data Lake dependencies (install on Spark workers)
+pyspark==3.5.3
+delta-spark==3.2.0
+# Iceberg (alternative to Delta):
+# pyiceberg[s3fs,pyarrow]==0.7.1
+# iceberg-spark-runtime-3.5_2.12 (add via --packages at submit time)

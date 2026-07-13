@@ -1,29 +1,30 @@
 """ML pipeline CLI entry point."""
 
-from pathlib import Path
+import argparse
 
-from barekat.config.settings import get_settings
-from barekat.ingestion.csv_loader import CSVIngestor
 from barekat.ml.pipeline import MLPipeline
 
 
 def main():
-    settings = get_settings()
-    ingestor = CSVIngestor(Path(settings.data_raw_path))
-    raw = ingestor.load_all()
-
-    table_map = {
-        "patients": "Patients",
-        "admissions": "Admissions",
-        "diagnoses": "Diagnoses",
-        "medications": "Medications",
-        "lab_results": "Lab_Results",
-    }
-    data = {table_map[k]: v for k, v in raw.items()}
+    parser = argparse.ArgumentParser(description="BAREKAT ML Pipeline")
+    parser.add_argument(
+        "--retrain",
+        action="store_true",
+        help="Retrain using latest data from PostgreSQL (or CSV fallback)",
+    )
+    args = parser.parse_args()
 
     ml = MLPipeline()
-    results = ml.run_all(data)
-    print(f"ML training results: {results}")
+    if args.retrain:
+        results = ml.retrain()
+        print("ML retrain completed (latest data)")
+    else:
+        results = ml.run_all()
+        print("ML training completed")
+
+    print(f"Readmission: {results.get('readmission')}")
+    print(f"Clustering: {results.get('clustering')}")
+    print(f"Alerts: {results.get('alerts_generated')} generated, {results.get('alerts_persisted')} persisted")
 
 
 if __name__ == "__main__":

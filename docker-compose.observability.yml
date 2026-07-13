@@ -1,0 +1,97 @@
+# Observability overlay — Prometheus + Grafana + Loki + Alertmanager
+# Usage: docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: barekat-prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - barekat-net
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: barekat-alertmanager
+    volumes:
+      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    networks:
+      - barekat-net
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: barekat-grafana
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-barekat_grafana}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    networks:
+      - barekat-net
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: barekat-loki
+    volumes:
+      - ./docker/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    networks:
+      - barekat-net
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: barekat-promtail
+    volumes:
+      - ./docker/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - barekat-net
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: barekat-redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - barekat-net
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: barekat-postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-barekat}:${POSTGRES_PASSWORD:-barekat_secret}@postgres:5432/${POSTGRES_DB:-barekat_health}?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - barekat-net
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:

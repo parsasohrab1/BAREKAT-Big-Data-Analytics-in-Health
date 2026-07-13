@@ -17,11 +17,18 @@ pyarrow==18.1.0
 # ML
 scikit-learn==1.5.2
 joblib==1.4.2
+shap==0.46.0
+
+# Medical imaging (DICOM / PACS)
+pydicom==2.4.4
+pynetdicom==2.1.1
+Pillow==11.0.0
 
 # Storage & messaging
 redis==5.2.1
 minio==7.2.12
 confluent-kafka==2.6.1
+faust-streaming==0.10.22
 
 # Spark (optional - install separately: pip install pyspark)
 # pyspark==3.5.3
@@ -30,6 +37,9 @@ confluent-kafka==2.6.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.17
+pyotp==2.9.0
+qrcode[pil]==8.0
+cryptography==44.0.0
 
 # Dashboard
 streamlit==1.40.2
@@ -39,6 +49,17 @@ plotly==5.24.1
 httpx==0.28.1
 python-dotenv==1.0.1
 structlog==24.4.0
+
+# ETL scheduling & validation
+celery==5.4.0
+great-expectations==0.18.22
+
+# Reports & notifications
+openpyxl==3.1.5
+reportlab==4.2.5
+
+# Observability
+prometheus-client==0.21.1
 
 # Dev / test
 pytest==8.3.4

@@ -1,0 +1,152 @@
+# BAREKAT Staging — separate ports and volumes from development/production
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: barekat-staging-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-barekat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barekat_staging_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-barekat_health_staging}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-barekat} -d ${POSTGRES_DB:-barekat_health_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: barekat-staging-redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_staging_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: barekat-staging-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-barekat_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-barekat_minio_staging_secret}
+    ports:
+      - "${MINIO_API_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9003}:9001"
+    volumes:
+      - minio_staging_data:/data
+
+  api:
+    container_name: barekat-staging-api
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      BAREKAT_ENV: staging
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-barekat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barekat_staging_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-barekat_health_staging}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-barekat_minio}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-barekat_minio_staging_secret}
+      JWT_SECRET: ${JWT_SECRET:-staging-change-me}
+    ports:
+      - "${API_PORT:-8001}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard:
+    container_name: barekat-staging-dashboard
+    build:
+      context: .
+      dockerfile: docker/dashboard/Dockerfile
+    environment:
+      BAREKAT_ENV: staging
+      BAREKAT_API_URL: http://api:8000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-barekat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barekat_staging_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-barekat_health_staging}
+      DASHBOARD_DATA_SOURCE: postgres
+      JWT_SECRET: ${JWT_SECRET:-staging-change-me}
+    ports:
+      - "${DASHBOARD_PORT:-8502}:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-worker:
+    container_name: barekat-staging-celery-worker
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    environment:
+      BAREKAT_ENV: staging
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-barekat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barekat_staging_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-barekat_health_staging}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATA_RAW_PATH: /app/data/raw
+    volumes:
+      - staging_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat:
+    container_name: barekat-staging-celery-beat
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    command: ["celery", "-A", "barekat.worker.celery_app:celery_app", "beat", "--loglevel=info"]
+    environment:
+      BAREKAT_ENV: staging
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-barekat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barekat_staging_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-barekat_health_staging}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATA_RAW_PATH: /app/data/raw
+    volumes:
+      - staging_data:/app/data:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  minio_staging_data:
+  staging_data:
+
+networks:
+  default:
+    name: barekat-staging-net

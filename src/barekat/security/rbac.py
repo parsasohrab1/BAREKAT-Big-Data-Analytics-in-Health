@@ -15,10 +15,12 @@ class Role(str, Enum):
   CLINICIAN = "clinician"
   RESEARCHER = "researcher"
   VIEWER = "viewer"
+  PLATFORM_ADMIN = "platform_admin"
 
 
 ROLE_PERMISSIONS: dict[Role, set[str]] = {
-  Role.ADMIN: {"read", "write", "delete", "manage_users", "view_phi", "export"},
+  Role.PLATFORM_ADMIN: {"read", "write", "delete", "manage_users", "view_phi", "export", "manage_tenants"},
+  Role.ADMIN: {"read", "write", "delete", "manage_users", "view_phi", "export", "manage_tenants"},
   Role.CLINICIAN: {"read", "write", "view_phi", "acknowledge_alerts"},
   Role.RESEARCHER: {"read", "export", "run_analytics"},
   Role.VIEWER: {"read"},

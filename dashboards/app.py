@@ -4,21 +4,31 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SRC = ROOT / "src"
+for path in (str(ROOT), str(SRC)):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 import streamlit as st
 
+from dashboards.utils.auth import (
+    filter_pages,
+    is_authenticated,
+    render_login_form,
+    render_user_sidebar,
+)
 from dashboards.utils.data_loader import (
     apply_filters,
     build_master_admissions,
     compute_kpis,
+    get_active_data_source,
     load_raw_tables,
 )
 from dashboards.utils.styles import apply_styles
 from dashboards.pages import (
     admissions as admissions_page,
     alerts as alerts_page,
+    compliance as compliance_page,
     diagnoses as diagnoses_page,
     infrastructure as infrastructure_page,
     laboratory as laboratory_page,
@@ -26,9 +36,12 @@ from dashboards.pages import (
     ml_insights as ml_insights_page,
     overview as overview_page,
     patients as patients_page,
+    imaging as imaging_page,
+    tenant_admin as tenant_admin_page,
+    reports as reports_page,
 )
 
-PAGES = {
+ALL_PAGES = {
     "نمای کلی": overview_page,
     "جمعیت بیماران": patients_page,
     "بستری و بخش‌ها": admissions_page,
@@ -37,24 +50,47 @@ PAGES = {
     "آزمایشگاه": laboratory_page,
     "هوش تحلیلی ML": ml_insights_page,
     "هشدارها": alerts_page,
+    "تصاویر پزشکی": imaging_page,
+    "انطباق و حریم خصوصی": compliance_page,
+    "مدیریت مراکز": tenant_admin_page,
+    "گزارش‌های مدیریتی": reports_page,
     "زیرساخت": infrastructure_page,
 }
 
 
-@st.cache_data(show_spinner=False)
-def load_dashboard_data():
-    data = load_raw_tables()
+@st.cache_data(show_spinner="در حال بارگذاری داده...")
+def load_dashboard_data(tenant_id: str = "default"):
+    from barekat.tenant.context import TenantContext, set_current_tenant
+
+    set_current_tenant(TenantContext(tenant_id=tenant_id, slug=tenant_id, name_fa=tenant_id))
+    data = load_raw_tables(tenant_id=tenant_id)
     master = build_master_admissions(data)
     kpis = compute_kpis(data)
-    return data, master, kpis
+    source = get_active_data_source()
+    set_current_tenant(None)
+    return data, master, kpis, source
 
 
-def render_sidebar(master):
-    st.sidebar.markdown("## BAREKAT")
-    st.sidebar.caption("Big Data Analytics in Health")
+def render_sidebar(master, pages: dict):
+    user = st.session_state.get("user", {})
+    tenant_id = st.session_state.get("tenant_id") or user.get("tenant_id", "default")
+
+    # Tenant branding
+    try:
+        from barekat.tenant.repository import get_tenant
+        tenant = get_tenant(tenant_id)
+        title = (tenant or {}).get("dashboard_title") or (tenant or {}).get("name_fa") or "BAREKAT"
+        color = (tenant or {}).get("primary_color", "#0891B2")
+    except Exception:
+        title, color = "BAREKAT", "#0891B2"
+
+    st.sidebar.markdown(f"## {title}")
+    st.sidebar.markdown(f"<span style='color:{color}'>Big Data Analytics in Health</span>", unsafe_allow_html=True)
+    st.sidebar.caption(f"Tenant: `{tenant_id}`")
+    render_user_sidebar()
     st.sidebar.divider()
 
-    page = st.sidebar.radio("منوی اصلی", list(PAGES.keys()), label_visibility="collapsed")
+    page = st.sidebar.radio("منوی اصلی", list(pages.keys()), label_visibility="collapsed")
 
     st.sidebar.divider()
     st.sidebar.markdown("### فیلترها")
@@ -84,11 +120,12 @@ def render_sidebar(master):
             )
 
     st.sidebar.divider()
+    source = get_active_data_source()
     st.sidebar.markdown(
-        """
+        f"""
         **راهنما**
-        - داده از `data/raw` بارگذاری می‌شود
-        - مدل‌های ML در مرورگر آموزش می‌بینند
+        - منبع داده: `{source.upper()}`
+        - هشدارها: PostgreSQL
         - API: `localhost:8000/docs`
         """
     )
@@ -105,22 +142,42 @@ def main():
     )
     apply_styles()
 
-    data, master, kpis = load_dashboard_data()
+    if not is_authenticated():
+        render_login_form()
+        st.stop()
+
+    user = st.session_state["user"]
+    pages = filter_pages(ALL_PAGES, user.get("role", "viewer"))
+
+    if not pages:
+        st.error("نقش شما دسترسی به هیچ صفحه‌ای ندارد.")
+        st.stop()
+
+    data, master, kpis, source = load_dashboard_data(
+        st.session_state.get("tenant_id") or user.get("tenant_id", "default")
+    )
 
     if not data:
         st.markdown(
             """
             <div class="hero-banner">
                 <h1>BAREKAT Health Analytics</h1>
-                <p>داده‌ای یافت نشد. ابتدا داده سنتتیک تولید کنید.</p>
+                <p>داده‌ای یافت نشد.</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.code("python scripts/generate_data.py --patients 1000 --admissions 3000", language="bash")
+        if source == "postgres":
+            st.code(
+                "python scripts/generate_data.py\n"
+                "python -m barekat.etl.pipeline",
+                language="bash",
+            )
+        else:
+            st.code("python scripts/generate_data.py --patients 1000 --admissions 3000", language="bash")
         st.stop()
 
-    page_name, departments, genders, admission_types = render_sidebar(master)
+    page_name, departments, genders, admission_types = render_sidebar(master, pages)
     filtered_master = apply_filters(master, departments, genders, admission_types)
 
     filtered_data = data.copy()
@@ -143,7 +200,7 @@ def main():
             ]
 
     filtered_kpis = compute_kpis(filtered_data)
-    PAGES[page_name].render(filtered_data, filtered_master, filtered_kpis)
+    pages[page_name].render(filtered_data, filtered_master, filtered_kpis)
 
 
 if __name__ == "__main__":

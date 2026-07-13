@@ -101,17 +101,31 @@ class DataTransformer:
     return df
 
   def build_admission_summary(self, data: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    admissions = self.clean_admissions(data["Admissions"].copy())
-    diag_counts = data["Diagnoses"].groupby("Admission_ID").size().reset_index(name="diagnosis_count")
-    diag_counts.columns = ["admission_id", "diagnosis_count"]
-    med_counts = data["Medications"].groupby("Admission_ID").size().reset_index(name="medication_count")
-    med_counts.columns = ["admission_id", "medication_count"]
-    lab_counts = data["Lab_Results"].groupby("Admission_ID").size().reset_index(name="lab_test_count")
-    lab_counts.columns = ["admission_id", "lab_test_count"]
+    if "Admissions" not in data or data["Admissions"].empty:
+      return pd.DataFrame()
 
+    admissions = self.clean_admissions(data["Admissions"].copy())
     summary = admissions[["admission_id", "patient_id", "department", "length_of_stay"]].copy()
-    summary = summary.merge(diag_counts, on="admission_id", how="left")
-    summary = summary.merge(med_counts, on="admission_id", how="left")
-    summary = summary.merge(lab_counts, on="admission_id", how="left")
-    summary = summary.fillna(0)
-    return summary
+
+    if "Diagnoses" in data and not data["Diagnoses"].empty:
+      diagnoses = self.normalize_columns(data["Diagnoses"].copy(), "Diagnoses")
+      diag_counts = diagnoses.groupby("admission_id").size().reset_index(name="diagnosis_count")
+      summary = summary.merge(diag_counts, on="admission_id", how="left")
+    else:
+      summary["diagnosis_count"] = 0
+
+    if "Medications" in data and not data["Medications"].empty:
+      medications = self.normalize_columns(data["Medications"].copy(), "Medications")
+      med_counts = medications.groupby("admission_id").size().reset_index(name="medication_count")
+      summary = summary.merge(med_counts, on="admission_id", how="left")
+    else:
+      summary["medication_count"] = 0
+
+    if "Lab_Results" in data and not data["Lab_Results"].empty:
+      lab_results = self.normalize_columns(data["Lab_Results"].copy(), "Lab_Results")
+      lab_counts = lab_results.groupby("admission_id").size().reset_index(name="lab_test_count")
+      summary = summary.merge(lab_counts, on="admission_id", how="left")
+    else:
+      summary["lab_test_count"] = 0
+
+    return summary.fillna(0)

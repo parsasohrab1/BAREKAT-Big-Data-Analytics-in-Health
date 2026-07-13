@@ -124,6 +124,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
       - BAREKAT_ENV=development
       - POSTGRES_HOST=postgres
@@ -136,6 +138,8 @@ services:
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-barekat_minio}
       - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-barekat_minio_secret}
+      - MINIO_BUCKET_LAKE=${MINIO_BUCKET_LAKE:-health-lake}
+      - LAKE_ENABLED=true
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
     ports:
@@ -152,14 +156,99 @@ services:
       dockerfile: docker/dashboard/Dockerfile
     container_name: barekat-dashboard
     depends_on:
-      - api
+      postgres:
+        condition: service_healthy
     environment:
       - BAREKAT_API_URL=http://api:8000
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-barekat}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-barekat_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-barekat_health}
+      - DASHBOARD_DATA_SOURCE=postgres
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
     ports:
       - "${DASHBOARD_PORT:-8501}:8501"
     volumes:
       - ./dashboards:/app/dashboards:ro
+      - ./src:/app/src:ro
       - ./data:/app/data:ro
+    networks:
+      - barekat-net
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    container_name: barekat-celery-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-barekat}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-barekat_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-barekat_health}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATA_RAW_PATH=/app/data/raw
+      - ETL_MAX_RETRIES=${ETL_MAX_RETRIES:-3}
+      - ETL_RETRY_DELAY_SECONDS=${ETL_RETRY_DELAY_SECONDS:-60}
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data
+    networks:
+      - barekat-net
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    container_name: barekat-celery-beat
+    command: ["celery", "-A", "barekat.worker.celery_app:celery_app", "beat", "--loglevel=info"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-barekat}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-barekat_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-barekat_health}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATA_RAW_PATH=/app/data/raw
+      - ETL_INCREMENTAL_MINUTE=${ETL_INCREMENTAL_MINUTE:-0}
+      - ETL_FULL_HOUR=${ETL_FULL_HOUR:-2}
+      - ETL_FULL_MINUTE=${ETL_FULL_MINUTE:-0}
+    volumes:
+      - ./src:/app/src:ro
+      - ./data:/app/data:ro
+    networks:
+      - barekat-net
+
+  faust-worker:
+    build:
+      context: .
+      dockerfile: docker/stream/Dockerfile
+    container_name: barekat-faust-worker
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-barekat}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-barekat_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-barekat_health}
     networks:
       - barekat-net
 

@@ -1,0 +1,130 @@
+# BAREKAT Secure Stack — TLS, Docker Secrets, WAF, MFA, PHI encryption
+# Usage:
+#   1. ./scripts/setup_secrets.sh
+#   2. ./scripts/generate_tls_certs.sh
+#   3. docker compose -f docker-compose.prod.yml -f docker-compose.secure.yml up -d
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret
+  postgres_password:
+    file: ./secrets/postgres_password
+  minio_secret_key:
+    file: ./secrets/minio_secret_key
+  phi_encryption_key:
+    file: ./secrets/phi_encryption_key
+  pseudonymization_salt:
+    file: ./secrets/pseudonymization_salt
+
+services:
+  postgres:
+    secrets:
+      - postgres_password
+    entrypoint: ["/bin/sh", "/entrypoint-secure.sh"]
+    command: ["postgres"]
+    volumes:
+      - ./docker/postgres/entrypoint-secure.sh:/entrypoint-secure.sh:ro
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:-barekat_health}
+    # No external port — internal only
+
+  redis:
+    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+    # No external port
+
+  minio:
+    secrets:
+      - minio_secret_key
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        export MINIO_ROOT_PASSWORD=$$(cat /run/secrets/minio_secret_key)
+        exec minio server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-barekat-minio-kms-key-32chars!!}
+      MINIO_KMS_AUTO_ENCRYPTION: "on"
+    # No external port — access via nginx TLS
+
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: barekat-vault
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_DEV_TOKEN:-barekat-dev-vault-token}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    profiles:
+      - vault-dev
+
+  api:
+    secrets:
+      - jwt_secret
+      - postgres_password
+      - minio_secret_key
+      - phi_encryption_key
+      - pseudonymization_salt
+    environment:
+      BAREKAT_ENV: production
+      TLS_ENABLED: "true"
+      SECRETS_BACKEND: docker
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      MINIO_SECRET_KEY_FILE: /run/secrets/minio_secret_key
+      PHI_ENCRYPTION_KEY_FILE: /run/secrets/phi_encryption_key
+      PSEUDONYMIZATION_SALT_FILE: /run/secrets/pseudonymization_salt
+      PHI_ENCRYPTION_ENABLED: "true"
+      MFA_REQUIRED_FOR_ADMIN: "true"
+      RATE_LIMIT_ENABLED: "true"
+      WAF_ENABLED: "true"
+      MINIO_SECURE: "true"
+    ports: []  # exposed via nginx only
+
+  dashboard:
+    secrets:
+      - jwt_secret
+      - postgres_password
+    environment:
+      TLS_ENABLED: "true"
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      BAREKAT_API_URL: https://api.barekat.local
+    ports: []
+
+  celery-worker:
+    secrets:
+      - postgres_password
+      - phi_encryption_key
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      PHI_ENCRYPTION_KEY_FILE: /run/secrets/phi_encryption_key
+      PHI_ENCRYPTION_ENABLED: "true"
+
+  celery-beat:
+    secrets:
+      - postgres_password
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: barekat-nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+      - dashboard
+      - minio
+    restart: unless-stopped
+
+networks:
+  default:
+    name: barekat-secure-net
+    internal: false

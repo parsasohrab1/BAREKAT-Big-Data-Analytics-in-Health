@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff==0.8.2
+
+      - name: Ruff check
+        run: ruff check src tests scripts dashboards
+
+  unit-test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Run unit tests
+        run: pytest tests/ -v --ignore=tests/integration -p no:cacheprovider
+
+  integration-test:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: barekat
+          POSTGRES_PASSWORD: barekat_secret
+          POSTGRES_DB: barekat_health_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U barekat -d barekat_health_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: barekat
+      POSTGRES_PASSWORD: barekat_secret
+      POSTGRES_DB: barekat_health_test
+      JWT_SECRET: ci-test-jwt-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 30); do
+            python -c "import psycopg2; psycopg2.connect(host='localhost', port=5432, user='barekat', password='barekat_secret', dbname='barekat_health_test')" && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Run integration tests
+        run: pytest tests/integration -v -m integration -p no:cacheprovider
+
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    needs: [lint, unit-test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/api/Dockerfile
+          push: false
+          tags: barekat-api:ci
+
+      - name: Build Dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/dashboard/Dockerfile
+          push: false
+          tags: barekat-dashboard:ci
+
+      - name: Build Worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/worker/Dockerfile
+          push: false
+          tags: barekat-worker:ci
+
+      - name: Build Faust stream image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/stream/Dockerfile
+          push: false
+          tags: barekat-faust:ci

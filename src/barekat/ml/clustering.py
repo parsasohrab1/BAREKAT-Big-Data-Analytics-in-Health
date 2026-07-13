@@ -1,25 +1,26 @@
 """Patient clustering for population health analytics."""
 
-from pathlib import Path
+from __future__ import annotations
 
-import joblib
 import pandas as pd
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
 from barekat.config.settings import get_settings
+from barekat.ml.registry import load_active_artifact, register_model
 
 
 class PatientClusterer:
     """Cluster patients based on clinical and demographic features."""
+
+    MODEL_NAME = "clustering"
 
     def __init__(self) -> None:
         self.settings = get_settings()
         self.n_clusters = self.settings.ml_cluster_count
         self.scaler = StandardScaler()
         self.model = KMeans(n_clusters=self.n_clusters, random_state=42, n_init=10)
-        self.model_path = Path(self.settings.data_models_path) / "clustering_model.joblib"
-        self.model_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _build_patient_features(self, data: dict[str, pd.DataFrame]) -> pd.DataFrame:
         patients = data["Patients"].copy()
@@ -35,33 +36,56 @@ class PatientClusterer:
         features = patients.merge(adm_stats, on="Patient_ID", how="left").fillna(0)
         features.columns = [c.lower() for c in features.columns]
 
-        numeric_cols = ["age", "bmi", "diabetes", "hypertension",
-                        "total_admissions", "avg_los", "icu_rate", "readmission_rate"]
-        features["gender_m"] = (features["gender"] == "M").astype(int)
-        numeric_cols.append("gender_m")
+        numeric_cols = [
+            c for c in [
+                "age", "bmi", "diabetes", "hypertension",
+                "total_admissions", "avg_los", "icu_rate", "readmission_rate",
+            ]
+            if c in features.columns
+        ]
+        if "gender" in features.columns:
+            features["gender_m"] = (features["gender"] == "M").astype(int)
+            numeric_cols.append("gender_m")
 
-        return features[["patient_id"] + [c for c in numeric_cols if c in features.columns]]
+        return features[["patient_id"] + numeric_cols]
 
     def train(self, data: dict[str, pd.DataFrame]) -> dict:
         features = self._build_patient_features(data)
         X = features.drop(columns=["patient_id"])
         X_scaled = self.scaler.fit_transform(X)
-        self.model.fit(X_scaled)
+        labels = self.model.fit_predict(X_scaled)
+        features["cluster"] = labels
 
-        features["cluster"] = self.model.labels_
-        joblib.dump({"model": self.model, "scaler": self.scaler}, self.model_path)
+        silhouette = None
+        if self.n_clusters > 1 and len(X) > self.n_clusters:
+            silhouette = round(float(silhouette_score(X_scaled, labels)), 4)
 
         cluster_sizes = features["cluster"].value_counts().to_dict()
+        metrics = {
+            "n_clusters": self.n_clusters,
+            "cluster_sizes": {str(k): int(v) for k, v in cluster_sizes.items()},
+            "silhouette_score": silhouette,
+        }
+
+        registration = register_model(
+            model_name=self.MODEL_NAME,
+            artifact={"model": self.model, "scaler": self.scaler},
+            metrics=metrics,
+            samples=len(features),
+        )
+
         return {
+            "version": registration["version"],
             "n_clusters": self.n_clusters,
             "cluster_sizes": cluster_sizes,
+            "silhouette_score": silhouette,
             "samples": len(features),
-            "model_path": str(self.model_path),
+            "artifact_path": registration["artifact_path"],
         }
 
     def predict(self, data: dict[str, pd.DataFrame]) -> pd.DataFrame:
-        if self.model_path.exists():
-            saved = joblib.load(self.model_path)
+        saved = load_active_artifact(self.MODEL_NAME)
+        if saved:
             self.model = saved["model"]
             self.scaler = saved["scaler"]
 

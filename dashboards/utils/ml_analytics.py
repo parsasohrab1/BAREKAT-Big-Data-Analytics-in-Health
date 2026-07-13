@@ -123,8 +123,13 @@ def build_alerts(master: pd.DataFrame, risk_scores: pd.Series, threshold: float 
     if master.empty or risk_scores.empty:
         return pd.DataFrame()
 
+    aligned_scores = risk_scores.reindex(master.index)
+    if aligned_scores.isna().all():
+        return pd.DataFrame()
+
     alerts = master.copy()
-    alerts["risk_score"] = risk_scores.values
+    alerts["risk_score"] = aligned_scores
+    alerts = alerts.dropna(subset=["risk_score"])
     alerts = alerts[alerts["risk_score"] >= threshold].copy()
 
     def severity(score: float) -> str:
@@ -140,3 +145,52 @@ def build_alerts(master: pd.DataFrame, risk_scores: pd.Series, threshold: float 
     alerts["alert_type"] = "readmission_risk"
     alerts["message"] = alerts["risk_score"].apply(lambda s: f"احتمال بستری مجدد: {s:.0%}")
     return alerts.sort_values("risk_score", ascending=False)
+
+
+def predict_los(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    from barekat.ml.los import LOSPredictor
+
+    try:
+        return LOSPredictor().predict(data)
+    except Exception:
+        return pd.DataFrame()
+
+
+def predict_early_warning(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    from barekat.ml.mortality_sepsis import EarlyWarningPredictor
+
+    try:
+        return EarlyWarningPredictor().predict_risks(data)
+    except Exception:
+        return pd.DataFrame()
+
+
+def score_vitals(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    from barekat.ml.vitals_monitor import VitalsMonitor
+
+    try:
+        return VitalsMonitor().score_admissions(data)
+    except Exception:
+        return pd.DataFrame()
+
+
+def demo_nlp_extract(data: dict[str, pd.DataFrame], limit: int = 5) -> pd.DataFrame:
+    from barekat.ml.nlp_notes import ClinicalNotesNLP
+
+    notes = data.get("Clinical_Notes", data.get("clinical_notes", pd.DataFrame()))
+    if notes.empty:
+        return pd.DataFrame()
+    nlp = ClinicalNotesNLP()
+    nlp.load()
+    rows = []
+    for _, note in notes.head(limit).iterrows():
+        text = str(note.get("Note_Text", note.get("note_text", "")))
+        for hit in nlp.extract_diagnoses(text, top_k=2):
+            rows.append({
+                "Admission_ID": note.get("Admission_ID", note.get("admission_id")),
+                "ICD_Code": hit["icd_code"],
+                "Confidence": hit["confidence"],
+                "Method": hit["method"],
+                "Note_Preview": text[:80] + "...",
+            })
+    return pd.DataFrame(rows)

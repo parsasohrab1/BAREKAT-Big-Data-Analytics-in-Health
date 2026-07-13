@@ -1,0 +1,79 @@
+groups:
+  - name: barekat_etl
+    rules:
+      - alert: ETLJobFailed
+        expr: increase(barekat_etl_runs_total{status="failed"}[1h]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: data-engineering
+        annotations:
+          summary: "ETL pipeline failed"
+          description: "ETL run failed in the last hour (mode={{ $labels.mode }})."
+
+      - alert: ETLStale
+        expr: (time() - barekat_etl_last_success_timestamp{mode="incremental"}) > 7200
+        for: 10m
+        labels:
+          severity: warning
+          team: data-engineering
+        annotations:
+          summary: "Incremental ETL stale"
+          description: "No successful incremental ETL in over 2 hours."
+
+  - name: barekat_ml
+    rules:
+      - alert: ModelDriftDetected
+        expr: barekat_ml_drift_detected == 1
+        for: 5m
+        labels:
+          severity: critical
+          team: ml-ops
+        annotations:
+          summary: "Model drift detected — {{ $labels.model_name }}"
+          description: "PSI or AUC drop exceeded threshold for {{ $labels.model_name }}."
+
+      - alert: ModelAucDrop
+        expr: barekat_ml_auc_drop > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-ops
+        annotations:
+          summary: "Model AUC degradation — {{ $labels.model_name }}"
+          description: "AUC dropped {{ $value }} from baseline."
+
+      - alert: ModelAucLow
+        expr: barekat_ml_model_auc < 0.65
+        for: 15m
+        labels:
+          severity: warning
+          team: ml-ops
+        annotations:
+          summary: "Low model AUC — {{ $labels.model_name }}"
+          description: "Active model AUC is {{ $value }}."
+
+  - name: barekat_lake
+    rules:
+      - alert: LakeJobFailed
+        expr: barekat_lake_job_last_success == 0
+        for: 30m
+        labels:
+          severity: warning
+          team: data-engineering
+        annotations:
+          summary: "Data Lake job failed — {{ $labels.job_name }}"
+
+  - name: barekat_api
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(barekat_http_requests_total{status=~"5.."}[5m]))
+          / sum(rate(barekat_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High API error rate"
+          description: "More than 5% of API requests returning 5xx."

@@ -21,10 +21,11 @@ class ObjectStorage:
         )
         self.bucket_raw = settings.minio_bucket_raw
         self.bucket_processed = settings.minio_bucket_processed
+        self.bucket_lake = settings.minio_bucket_lake
         self._ensure_buckets()
 
     def _ensure_buckets(self) -> None:
-        for bucket in (self.bucket_raw, self.bucket_processed):
+        for bucket in (self.bucket_raw, self.bucket_processed, self.bucket_lake):
             if not self.client.bucket_exists(bucket):
                 self.client.make_bucket(bucket)
 

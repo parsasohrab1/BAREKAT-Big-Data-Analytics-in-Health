@@ -1,6 +1,6 @@
 """Analytics and reporting endpoints."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 
 from barekat.security.rbac import require_permission, require_role, Role
@@ -34,43 +34,45 @@ def analytics_summary(user: dict = Depends(require_permission("read"))):
 
 @router.get("/alerts")
 def list_alerts(user: dict = Depends(require_permission("read"))):
-    with engine.connect() as conn:
-        rows = conn.execute(text("""
-            SELECT * FROM analytics.predictive_alerts
-            WHERE is_acknowledged = FALSE
-            ORDER BY created_at DESC LIMIT 100
-        """)).mappings().all()
-    return {"alerts": [dict(r) for r in rows]}
+    from barekat.services.alerts import load_active_alerts
+
+    alerts_df = load_active_alerts()
+    return {"alerts": alerts_df.to_dict(orient="records")}
+
+
+@router.post("/alerts/{alert_id}/acknowledge")
+def acknowledge_alert_endpoint(alert_id: int, user: dict = Depends(require_permission("acknowledge_alerts"))):
+    from barekat.services.alerts import acknowledge_alert
+
+    if acknowledge_alert(alert_id):
+        return {"status": "acknowledged", "alert_id": alert_id}
+    return {"status": "not_found", "alert_id": alert_id}
 
 
 @router.post("/etl/run")
-def run_etl(user: dict = Depends(require_role(Role.ADMIN))):
+def run_etl(mode: str = Query("incremental"), user: dict = Depends(require_role(Role.ADMIN))):
     from barekat.etl.pipeline import ETLPipeline
 
+    if mode not in ("incremental", "full"):
+        return {"status": "error", "message": "mode must be incremental or full"}
+
     pipeline = ETLPipeline()
-    counts = pipeline.run()
-    quality = pipeline.validate_data_quality()
-    return {"status": "completed", "loaded_records": counts, "quality_checks": quality}
+    result = pipeline.run(mode=mode)
+    return {"status": "completed", **result}
+
+
+@router.get("/etl/runs")
+def list_etl_runs(limit: int = 20, user: dict = Depends(require_role(Role.ADMIN))):
+    from barekat.etl.run_logger import get_recent_runs
+
+    return {"runs": get_recent_runs(limit=limit)}
 
 
 @router.post("/ml/train")
-def train_models(user: dict = Depends(require_role(Role.ADMIN, Role.RESEARCHER))):
-    from barekat.etl.pipeline import ETLPipeline
+def train_models_legacy(user: dict = Depends(require_role(Role.ADMIN, Role.RESEARCHER))):
+    """Legacy endpoint — prefer POST /api/v1/ml/train."""
     from barekat.ml.pipeline import MLPipeline
-    from barekat.ingestion.csv_loader import CSVIngestor
-    from pathlib import Path
-    from barekat.config.settings import get_settings
-
-    settings = get_settings()
-    ingestor = CSVIngestor(Path(settings.data_raw_path))
-    raw = ingestor.load_all()
-
-    table_map = {
-        "patients": "Patients", "admissions": "Admissions",
-        "diagnoses": "Diagnoses", "medications": "Medications", "lab_results": "Lab_Results",
-    }
-    data = {table_map[k]: v for k, v in raw.items()}
 
     ml = MLPipeline()
-    results = ml.run_all(data)
+    results = ml.run_all()
     return {"status": "completed", "results": results}
