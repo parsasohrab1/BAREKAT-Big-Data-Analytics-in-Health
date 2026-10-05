@@ -1,7 +1,7 @@
 {
   "name": "BAREKAT Health Analytics",
   "short_name": "BAREKAT",
-  "description": "داشبورد موبایل تحلیل سلامت BAREKAT",
+  "description": "BAREKAT health analytics mobile dashboard",
   "start_url": "/mobile/",
   "display": "standalone",
   "orientation": "portrait",

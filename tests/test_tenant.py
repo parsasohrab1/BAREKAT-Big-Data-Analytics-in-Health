@@ -5,7 +5,7 @@ from barekat.tenant.isolation import tenant_filter, tenant_params
 
 
 def test_tenant_context():
-    ctx = TenantContext(tenant_id="tehran-general", slug="tehran-general", name_fa="تهران")
+    ctx = TenantContext(tenant_id="tehran-general", slug="tehran-general", name_fa="Tehran")
     set_current_tenant(ctx)
     assert get_tenant_id() == "tehran-general"
     set_current_tenant(None)

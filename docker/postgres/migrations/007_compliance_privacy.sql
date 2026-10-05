@@ -58,12 +58,12 @@ CREATE TABLE IF NOT EXISTS audit.retention_policies (
 );
 
 INSERT INTO audit.retention_policies (data_category, retention_days, regulation_ref, description_fa) VALUES
-    ('clinical_notes', 2555, 'HIPAA/GDPR/IR-MOH', 'یادداشت‌های بالینی — ۷ سال'),
-    ('lab_results', 1825, 'HIPAA/IR-MOH', 'نتایج آزمایش — ۵ سال'),
-    ('admissions', 2555, 'HIPAA/GDPR/IR-MOH', 'سوابق بستری — ۷ سال'),
-    ('dicom_studies', 3650, 'HIPAA/IR-MOH', 'تصاویر پزشکی — ۱۰ سال'),
-    ('access_logs', 2190, 'HIPAA/GDPR', 'لاگ دسترسی — ۶ سال'),
-    ('predictive_alerts', 365, 'IR-MOH', 'هشدارهای تحلیلی — ۱ سال')
+    ('clinical_notes', 2555, 'HIPAA/GDPR/IR-MOH', 'Clinical notes — 7 years'),
+    ('lab_results', 1825, 'HIPAA/IR-MOH', 'Lab results — 5 years'),
+    ('admissions', 2555, 'HIPAA/GDPR/IR-MOH', 'Admission records — 7 years'),
+    ('dicom_studies', 3650, 'HIPAA/IR-MOH', 'Medical images — 10 years'),
+    ('access_logs', 2190, 'HIPAA/GDPR', 'Access log — 6 years'),
+    ('predictive_alerts', 365, 'IR-MOH', 'Analytical alerts — 1 year')
 ON CONFLICT (data_category) DO NOTHING;
 
 -- Legal hold (suspend deletion for litigation/audit)

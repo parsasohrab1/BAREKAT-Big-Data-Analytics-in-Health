@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 
 def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 15000) -> dict[str, pd.DataFrame]:
-    """تولید داده‌های سنتتیک کلان سلامت برای یک سیستم بیمارستانی."""
+    """Generate health big data synthetic data for a hospital system."""
     np.random.seed(42)
 
     patients_data = {
@@ -148,7 +148,7 @@ def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 150
     note_templates = [
         "Patient presents with {dx}. History of {comorbid}. Plan: monitor vitals, continue treatment.",
         "Progress note: {dx} suspected. Vitals stable. Labs pending. Assessment per {dept} protocol.",
-        "یادداشت پزشک: بیمار با علائم {dx}. سابقه {comorbid}. نیاز به پایش علائم حیاتی.",
+        "Physician note: patient with symptoms of {dx}. History of {comorbid}. Vital signs monitoring required.",
     ]
     comorbidities = ["hypertension", "diabetes", "COPD", "CKD", "obesity"]
     notes_list = []

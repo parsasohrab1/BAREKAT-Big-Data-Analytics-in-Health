@@ -8,26 +8,26 @@ from barekat.security.auth import authenticate_user, create_access_token, decode
 from barekat.security.rbac import ROLE_PERMISSIONS, Role
 
 PAGE_ACCESS: dict[str, list[str]] = {
-    "نمای کلی": ["read"],
-    "جمعیت بیماران": ["view_phi"],
-    "بستری و بخش‌ها": ["read"],
-    "تشخیص‌ها": ["read"],
-    "داروها": ["read"],
-    "آزمایشگاه": ["read"],
-    "هوش تحلیلی ML": ["read", "run_analytics"],
-    "هشدارها": ["read"],
-    "تصاویر پزشکی": ["view_phi"],
-    "انطباق و حریم خصوصی": ["manage_users"],
-    "مدیریت مراکز": ["manage_tenants"],
-    "گزارش‌های مدیریتی": ["read", "export"],
-    "زیرساخت": ["manage_users"],
+    "Overview": ["read"],
+    "Patient Population": ["view_phi"],
+    "Admissions and Departments": ["read"],
+    "Diagnoses": ["read"],
+    "Medications": ["read"],
+    "Laboratory": ["read"],
+    "ML Analytics": ["read", "run_analytics"],
+    "Alerts": ["read"],
+    "Medical Imaging": ["view_phi"],
+    "Compliance and Privacy": ["manage_users"],
+    "Center Management": ["manage_tenants"],
+    "Management Reports": ["read", "export"],
+    "Infrastructure": ["manage_users"],
 }
 
 ROLE_LABELS = {
-    "admin": "مدیر",
-    "clinician": "پزشک",
-    "researcher": "محقق",
-    "viewer": "بیننده",
+    "admin": "Administrator",
+    "clinician": "Physician",
+    "researcher": "Researcher",
+    "viewer": "Viewer",
 }
 
 
@@ -94,7 +94,7 @@ def render_login_form() -> None:
         """
         <div class="hero-banner">
             <h1>BAREKAT Health Analytics</h1>
-            <p>برای دسترسی به داشبورد وارد شوید</p>
+            <p>Log in to access the dashboard</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -103,19 +103,19 @@ def render_login_form() -> None:
     _col1, col2, _col3 = st.columns([1, 1.2, 1])
     with col2:
         with st.form("login_form", clear_on_submit=False):
-            username = st.text_input("نام کاربری")
-            password = st.text_input("رمز عبور", type="password")
-            submitted = st.form_submit_button("ورود", use_container_width=True)
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Log in", use_container_width=True)
 
         if submitted:
             if login(username, password):
                 st.rerun()
             else:
-                st.error("نام کاربری یا رمز عبور نادرست است.")
+                st.error("Incorrect username or password.")
 
         st.markdown(
             """
-            **کاربران نمونه (توسعه)**
+            **Sample users (development)**
             - `admin` / `admin123`
             - `clinician` / `clinician123`
             - `researcher` / `researcher123`
@@ -132,10 +132,10 @@ def render_user_sidebar() -> None:
     st.sidebar.markdown(
         f"**{user.get('username', '')}**  \n"
         f"<span style='color:#0891B2'>{ROLE_LABELS.get(role, role)}</span>  \n"
-        f"<small>مرکز: {tenant}</small>",
+        f"<small>Center: {tenant}</small>",
         unsafe_allow_html=True,
     )
-    if st.sidebar.button("خروج", use_container_width=True):
+    if st.sidebar.button("Log out", use_container_width=True):
         logout()
         st.rerun()
 

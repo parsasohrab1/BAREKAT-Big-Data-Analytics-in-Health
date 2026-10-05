@@ -17,18 +17,18 @@ from dashboards.utils.styles import render_hero
 
 def render(data: dict, master, kpis: dict) -> None:
     render_hero(
-        "تصاویر پزشکی (DICOM / PACS)",
-        "اتصال PACS، thumbnail، viewer با Window/Level — CAD در فاز بعد",
+        "Medical Imaging (DICOM / PACS)",
+        "PACS connection, thumbnails, viewer with Window/Level — CAD in the next phase",
     )
 
     api_url = os.getenv("BAREKAT_API_URL", "http://localhost:8000")
-    st.caption(f"API: {api_url}/api/v1/imaging | ذخیره‌سازی: MinIO")
+    st.caption(f"API: {api_url}/api/v1/imaging | Storage: MinIO")
 
     tab_catalog, tab_viewer, tab_pacs, tab_cad = st.tabs([
-        "کاتالوگ مطالعات",
+        "Studies catalog",
         "Viewer",
-        "اتصال PACS",
-        "CAD (فاز بعد)",
+        "PACS connection",
+        "CAD (next phase)",
     ])
 
     studies = load_imaging_studies()
@@ -36,23 +36,23 @@ def render(data: dict, master, kpis: dict) -> None:
     with tab_catalog:
         if studies.empty:
             st.info(
-                "مطالعه DICOM یافت نشد. نمونه بسازید:\n\n"
+                "No DICOM study found. Create samples:\n\n"
                 "`python scripts/generate_sample_dicom.py --output ./data/dicom`\n\n"
-                "سپس ingest: `POST /api/v1/imaging/ingest/local?directory=./data/dicom`"
+                "then ingest: `POST /api/v1/imaging/ingest/local?directory=./data/dicom`"
             )
         else:
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.metric("تعداد مطالعات", len(studies))
+                st.metric("Number of studies", len(studies))
             with c2:
                 mods = studies["modality"].nunique() if "modality" in studies.columns else 0
-                st.metric("مدالیته‌ها", mods)
+                st.metric("Modalities", mods)
             with c3:
                 pacs = studies["pacs_source"].nunique() if "pacs_source" in studies.columns else 1
-                st.metric("منابع", pacs)
+                st.metric("Sources", pacs)
 
             modality_filter = st.multiselect(
-                "فیلتر مدالیته",
+                "Modality filter",
                 options=sorted(studies["modality"].dropna().unique()) if "modality" in studies.columns else [],
             )
             filtered = studies
@@ -91,9 +91,9 @@ def render(data: dict, master, kpis: dict) -> None:
                     if thumb:
                         st.image(bytes_to_image(thumb), use_container_width=True)
                     else:
-                        st.markdown("*(بدون thumbnail)*")
+                        st.markdown("*(no thumbnail)*")
 
-                    if st.button("مشاهده", key=f"view_{study_uid or idx}"):
+                    if st.button("View", key=f"view_{study_uid or idx}"):
                         st.session_state["selected_study_uid"] = study_uid
                         st.session_state["selected_file_path"] = file_path
 
@@ -102,7 +102,7 @@ def render(data: dict, master, kpis: dict) -> None:
         file_path = st.session_state.get("selected_file_path", "")
 
         if not study_uid and not file_path:
-            st.warning("از تب کاتالوگ یک مطالعه را انتخاب کنید.")
+            st.warning("Select a study from the catalog tab.")
         else:
             st.markdown(f"**Study UID:** `{study_uid or 'local'}`")
             window = st.slider("Window", 50, 2000, 400, 50)
@@ -131,22 +131,22 @@ def render(data: dict, master, kpis: dict) -> None:
             if image_bytes:
                 st.image(bytes_to_image(image_bytes), use_container_width=True)
             else:
-                st.error("نمایش تصویر ممکن نیست.")
+                st.error("Cannot display the image.")
 
     with tab_pacs:
-        st.markdown("### اتصال PACS")
+        st.markdown("### PACS Connection")
         st.markdown("""
-| روش | توضیح |
+| Method | Description |
 |-----|--------|
-| **DIMSE** | C-ECHO / C-FIND روی `PACS_HOST:PACS_PORT` |
-| **Orthanc REST** | `PACS_ORTHANC_URL` برای query و retrieve |
+| **DIMSE** | C-ECHO / C-FIND on `PACS_HOST:PACS_PORT` |
+| **Orthanc REST** | `PACS_ORTHANC_URL` for query and retrieve |
         """)
-        if st.button("تست C-ECHO (نیاز به JWT admin/clinician)"):
+        if st.button("Test C-ECHO (requires admin/clinician JWT)"):
             try:
                 import httpx
                 token = st.session_state.get("token")
                 if not token:
-                    st.error("ابتدا وارد شوید.")
+                    st.error("Please log in first.")
                 else:
                     resp = httpx.post(
                         f"{api_url}/api/v1/imaging/pacs/echo",
@@ -157,8 +157,8 @@ def render(data: dict, master, kpis: dict) -> None:
             except Exception as exc:
                 st.error(str(exc))
 
-        patient_id = st.text_input("Patient ID برای C-FIND")
-        if st.button("جستجوی مطالعات PACS") and patient_id:
+        patient_id = st.text_input("Patient ID for C-FIND")
+        if st.button("Search PACS studies") and patient_id:
             try:
                 import httpx
                 token = st.session_state.get("token")
@@ -173,15 +173,15 @@ def render(data: dict, master, kpis: dict) -> None:
                 st.error(str(exc))
 
     with tab_cad:
-        st.markdown("### CAD — تشخیص کمکی (فاز بعد)")
+        st.markdown("### CAD — Computer-Aided Diagnosis (next phase)")
         st.info(
-            "مدل‌های CAD هنوز آموزش ندیده‌اند. در فاز بعد:\n"
+            "CAD models have not been trained yet. In the next phase:\n"
             "- Chest X-ray: pneumothorax, cardiomegaly\n"
             "- CT: hemorrhage, PE, nodule\n"
             "- Mammography: mass detection"
         )
         if study_uid:
-            if st.button("اجرای CAD stub"):
+            if st.button("Run CAD stub"):
                 try:
                     import httpx
                     token = st.session_state.get("token")

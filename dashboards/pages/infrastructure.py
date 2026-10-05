@@ -17,8 +17,8 @@ MODELS_DIR = Path(os.getenv("MODELS_DIR", "./data/models"))
 
 def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
     render_hero(
-        "زیرساخت و خط لوله داده",
-        "وضعیت منابع داده، ETL، ذخیره‌سازی و سرویس‌های پلتفرم",
+        "Infrastructure and Data Pipeline",
+        "Status of data sources, ETL, storage and platform services",
     )
 
     user = get_current_user() or {}
@@ -26,67 +26,67 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("منبع داده", data_source.upper())
+        st.metric("Data source", data_source.upper())
     with c2:
-        st.metric("جداول بارگذاری‌شده", len(data))
+        st.metric("Loaded tables", len(data))
     with c3:
-        st.metric("رکوردهای کل", sum(len(df) for df in data.values()))
+        st.metric("Total records", sum(len(df) for df in data.values()))
     with c4:
         try:
             from barekat.services.alerts import alert_count_by_severity
             alert_counts = alert_count_by_severity()
-            st.metric("هشدارهای فعال", sum(alert_counts.values()))
+            st.metric("Active alerts", sum(alert_counts.values()))
         except Exception:
-            st.metric("هشدارهای فعال", "—")
+            st.metric("Active alerts", "—")
 
-    st.markdown("### وضعیت منابع داده")
+    st.markdown("### Data source status")
     rows = []
     for name, df in data.items():
         file_path = DATA_DIR / f"{name}.csv"
         rows.append({
-            "منبع": name,
-            "رکورد": len(df),
-            "ستون": len(df.columns),
-            "فایل": str(file_path),
-            "وضعیت": "فعال" if file_path.exists() else "ناموجود",
+            "Source": name,
+            "Records": len(df),
+            "Columns": len(df.columns),
+            "File": str(file_path),
+            "Status": "Active" if file_path.exists() else "Unavailable",
         })
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-    st.markdown("### معماری پلتفرم")
+    st.markdown("### Platform architecture")
     st.markdown(
         """
-        | لایه | فناوری | نقش |
+        | Layer | Technology | Role |
         |------|--------|-----|
-        | Ingestion | CSV / HL7 / DICOM | ورود داده‌های ناهمگن |
-        | ETL | Python Pipeline | استخراج، تبدیل، بارگذاری |
-        | Storage | PostgreSQL + MinIO | انبار داده و فایل |
-        | Streaming | Kafka | رویدادهای بلادرنگ |
-        | Processing | Spark | پردازش توزیع‌شده |
-        | ML | scikit-learn | پیش‌بینی و خوشه‌بندی |
-        | API | FastAPI + RBAC | دسترسی امن |
-        | Dashboard | Streamlit | تجسم تعاملی |
+        | Ingestion | CSV / HL7 / DICOM | Heterogeneous data ingestion |
+        | ETL | Python Pipeline | Extract, transform, load |
+        | Storage | PostgreSQL + MinIO | Data warehouse and files |
+        | Streaming | Kafka | Real-time events |
+        | Processing | Spark | Distributed processing |
+        | ML | scikit-learn | Prediction and clustering |
+        | API | FastAPI + RBAC | Secure access |
+        | Dashboard | Streamlit | Interactive visualization |
         """
     )
 
-    st.markdown("### قابلیت‌های فعال")
+    st.markdown("### Active capabilities")
     features = [
-        ("تولید داده سنتتیک", True, "Patients, Admissions, Diagnoses, Medications, Lab Results"),
-        ("خط لوله ETL", True, "Extract → Transform → Load به PostgreSQL"),
-        ("بارگذاری Incremental", True, "Upsert + watermark در staging.etl_watermarks"),
-        ("اعتبارسنجی Schema", True, "Great Expectations پیش از بارگذاری"),
-        ("زمان‌بندی ETL", True, "Celery Beat: ساعتی incremental، روزانه full"),
-        ("لاگ و Retry", True, "audit.etl_runs با retry خودکار"),
-        ("پیش‌بینی بستری مجدد", True, "Gradient Boosting Classifier"),
-        ("خوشه‌بندی بیماران", True, "K-Means بر اساس ویژگی‌های بالینی"),
-        ("هشدارهای پیش‌بینی‌کننده", True, "analytics.predictive_alerts"),
-        ("کنترل دسترسی RBAC", True, "admin / clinician / researcher / viewer"),
+        ("Synthetic data generation", True, "Patients, Admissions, Diagnoses, Medications, Lab Results"),
+        ("ETL pipeline", True, "Extract → Transform → Load into PostgreSQL"),
+        ("Incremental loading", True, "Upsert + watermark in staging.etl_watermarks"),
+        ("Schema validation", True, "Great Expectations before loading"),
+        ("ETL scheduling", True, "Celery Beat: hourly incremental, daily full"),
+        ("Logging and Retry", True, "audit.etl_runs with automatic retry"),
+        ("Readmission prediction", True, "Gradient Boosting Classifier"),
+        ("Patient clustering", True, "K-Means based on clinical features"),
+        ("Predictive alerts", True, "analytics.predictive_alerts"),
+        ("RBAC access control", True, "admin / clinician / researcher / viewer"),
     ]
 
     for name, active, desc in features:
         icon = "✅" if active else "⏳"
         st.markdown(f"- {icon} **{name}** — {desc}")
 
-    st.markdown("### تاریخچه اجرای ETL")
+    st.markdown("### ETL run history")
     try:
         from barekat.etl.run_logger import get_recent_runs
         runs = get_recent_runs(limit=15)
@@ -101,18 +101,18 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
             ]
             st.dataframe(runs_df[display_cols], use_container_width=True, hide_index=True)
         else:
-            st.info("هنوز اجرای ETL ثبت نشده است.")
+            st.info("No ETL run has been recorded yet.")
     except Exception as exc:
-        st.warning(f"نمایش لاگ ETL نیاز به PostgreSQL دارد: {exc}")
+        st.warning(f"Displaying the ETL log requires PostgreSQL: {exc}")
 
     if not master.empty:
-        st.markdown("### کیفیت داده")
+        st.markdown("### Data quality")
         quality = {
-            "بستری بدون بیمار": int(master["Patient_ID"].isna().sum()),
-            "LOS منفی": int((master["Length_of_Stay"] < 0).sum()) if "Length_of_Stay" in master.columns else 0,
-            "فیلدهای خالی Department": int(master["Department"].isna().sum()),
+            "Admissions without a patient": int(master["Patient_ID"].isna().sum()),
+            "Negative LOS": int((master["Length_of_Stay"] < 0).sum()) if "Length_of_Stay" in master.columns else 0,
+            "Empty Department fields": int(master["Department"].isna().sum()),
         }
-        qdf = pd.DataFrame([{"بررسی": k, "تعداد": v, "وضعیت": "✅" if v == 0 else "⚠️"} for k, v in quality.items()])
+        qdf = pd.DataFrame([{"Check": k, "Count": v, "Status": "✅" if v == 0 else "⚠️"} for k, v in quality.items()])
         st.dataframe(qdf, use_container_width=True, hide_index=True)
 
     st.info(

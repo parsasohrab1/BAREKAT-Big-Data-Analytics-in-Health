@@ -29,9 +29,9 @@ ON CONFLICT (username) DO UPDATE SET
 CREATE SCHEMA IF NOT EXISTS tenant;
 
 INSERT INTO tenant.tenants (tenant_id, slug, name_fa, name_en, plan_id, contact_email) VALUES
-    ('default', 'default', 'بیمارستان پیش‌فرض', 'Default Hospital', 'professional', 'admin@default.local'),
-    ('tehran-general', 'tehran-general', 'بیمارستان عمومی تهران', 'Tehran General Hospital', 'enterprise', 'it@tehran-general.ir'),
-    ('isfahan-medical', 'isfahan-medical', 'مرکز پزشکی اصفهان', 'Isfahan Medical Center', 'professional', 'admin@isfahan-medical.ir')
+    ('default', 'default', 'Default Hospital', 'Default Hospital', 'professional', 'admin@default.local'),
+    ('tehran-general', 'tehran-general', 'Tehran General Hospital', 'Tehran General Hospital', 'enterprise', 'it@tehran-general.ir'),
+    ('isfahan-medical', 'isfahan-medical', 'Isfahan Medical Center', 'Isfahan Medical Center', 'professional', 'admin@isfahan-medical.ir')
 ON CONFLICT (tenant_id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS tenant.tenant_users (

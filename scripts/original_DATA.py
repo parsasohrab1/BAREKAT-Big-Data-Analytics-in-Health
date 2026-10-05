@@ -5,17 +5,17 @@ import random
 
 def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
     """
-    تولید داده‌های سنتتیک کلان سلامت برای یک سیستم بیمارستانی
+    Generate health big data synthetic data for a hospital system
     
-    پارامترها:
-    n_patients: تعداد بیماران
-    n_admissions: تعداد بستری‌ها
+    Parameters:
+    n_patients: number of patients
+    n_admissions: number of admissions
     
-    بازگشت: دیکشنری از دیتافریم‌ها (جداول مختلف)
+    Returns: dictionary of dataframes (different tables)
     """
     np.random.seed(42)
     
-    # 1. تولید جدول بیماران
+    # 1. Generate the patients table
     patients_data = {
         'Patient_ID': [f'PT{str(i).zfill(5)}' for i in range(n_patients)],
         'Age': np.random.randint(18, 95, n_patients),
@@ -30,7 +30,7 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
     patients_df = pd.DataFrame(patients_data)
     patients_df['BMI'] = np.clip(patients_df['BMI'], 15, 45)
     
-    # 2. تولید جدول بستری‌ها
+    # 2. Generate the admissions table
     admission_types = ['Emergency', 'Elective', 'Urgent']
     departments = ['Cardiology', 'Neurology', 'Oncology', 'Orthopedics', 'Internal Medicine', 
                    'Pediatrics', 'Surgery', 'Psychiatry']
@@ -43,7 +43,7 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
         admission_date = datetime(2023, 1, 1) + timedelta(days=np.random.randint(1, 730))
         discharge_date = admission_date + timedelta(days=np.random.randint(1, 30))
         
-        # تشخیص‌ها بر اساس سن و بخش
+        # Diagnoses based on age and department
         dept = np.random.choice(departments)
         if patient_age < 18 and dept != 'Pediatrics':
             dept = 'Pediatrics'
@@ -62,7 +62,7 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
     
     admissions_df = pd.DataFrame(admissions_list)
     
-    # 3. تولید جدول تشخیص‌ها (ICD-10 کدها)
+    # 3. Generate the diagnoses table (ICD-10 codes)
     icd_codes = ['E11.9', 'I10', 'I25.10', 'J44.9', 'N18.9', 'C50.9', 'C34.9', 'E66.9', 'F32.9', 'M17.9']
     icd_descriptions = ['Type 2 Diabetes', 'Essential Hypertension', 'Chronic Ischemic Heart Disease',
                         'COPD', 'Chronic Kidney Disease', 'Breast Cancer', 'Lung Cancer', 
@@ -70,7 +70,7 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
     
     diagnoses_list = []
     for _, admission in admissions_df.iterrows():
-        # هر بستری بین 1 تا 4 تشخیص دارد
+        # Each admission has between 1 and 4 diagnoses
         n_diagnoses = np.random.randint(1, 5)
         icd_indices = np.random.choice(len(icd_codes), n_diagnoses, replace=False)
         for idx in icd_indices:
@@ -79,19 +79,19 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
                 'Admission_ID': admission['Admission_ID'],
                 'ICD_Code': icd_codes[idx],
                 'Diagnosis_Description': icd_descriptions[idx],
-                'Primary_Diagnosis': idx == icd_indices[0]  # اولین تشخیص به عنوان تشخیص اصلی
+                'Primary_Diagnosis': idx == icd_indices[0]  # first diagnosis as the primary diagnosis
             })
     
     diagnoses_df = pd.DataFrame(diagnoses_list)
     
-    # 4. تولید جدول داروها
+    # 4. Generate the medications table
     medications = ['Metformin', 'Lisinopril', 'Atorvastatin', 'Omeprazole', 'Albuterol', 
                    'Losartan', 'Levothyroxine', 'Sertraline', 'Acetaminophen', 'Ibuprofen']
     dosage_units = ['mg', 'g', 'mcg']
     
     meds_list = []
     for _, admission in admissions_df.iterrows():
-        # هر بستری بین 0 تا 4 دارو دارد
+        # Each admission has between 0 and 4 medications
         n_meds = np.random.randint(0, 5)
         if n_meds > 0:
             for _ in range(n_meds):
@@ -109,7 +109,7 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
     
     medications_df = pd.DataFrame(meds_list) if meds_list else pd.DataFrame()
     
-    # 5. تولید جدول نتایج آزمایشگاهی
+    # 5. Generate the laboratory results table
     lab_tests = ['CBC', 'BMP', 'LFT', 'Lipid Panel', 'HbA1c', 'TSH', 'Vitamin D']
     lab_results_list = []
     
@@ -117,7 +117,7 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
         n_tests = np.random.randint(1, 6)
         for _ in range(n_tests):
             test = np.random.choice(lab_tests)
-            # مقادیر نرمال شبیه‌سازی‌شده
+            # Simulated normal values
             if test == 'CBC':
                 value = np.random.normal(7.5, 1.0)  # WBC x 10^3/uL
             elif test == 'HbA1c':
@@ -147,12 +147,12 @@ def generate_healthcare_big_data(n_patients=5000, n_admissions=15000):
         'Lab_Results': lab_results_df
     }
 
-# تولید داده‌ها
+# Generate the data
 healthcare_data = generate_healthcare_big_data(n_patients=1000, n_admissions=3000)
 
-print("تعداد رکوردها:")
+print("Number of records:")
 for table_name, df in healthcare_data.items():
     print(f"{table_name}: {len(df)}")
 
-print("\nنمونه از جدول بیماران:")
+print("\nSample from the patients table:")
 print(healthcare_data['Patients'].head())

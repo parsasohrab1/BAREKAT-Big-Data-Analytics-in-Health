@@ -92,30 +92,30 @@ def collect_weekly_metrics(tenant_id: str, period_start: date | None = None, per
 def generate_excel_report(metrics: dict[str, Any]) -> bytes:
     buffer = io.BytesIO()
     summary = pd.DataFrame([{
-        "مرکز": metrics.get("tenant_name"),
-        "از تاریخ": metrics.get("period_start"),
-        "تا تاریخ": metrics.get("period_end"),
-        "تعداد بستری": metrics.get("admissions_total"),
-        "میانگین LOS": metrics.get("avg_length_of_stay"),
-        "نرخ بستری مجدد %": metrics.get("readmission_rate_pct"),
-        "بیماران یکتا": metrics.get("unique_patients"),
-        "هشدار بحرانی": metrics.get("alerts_critical"),
-        "هشدار بالا": metrics.get("alerts_high"),
+        "Center": metrics.get("tenant_name"),
+        "From date": metrics.get("period_start"),
+        "To date": metrics.get("period_end"),
+        "Number of admissions": metrics.get("admissions_total"),
+        "Average LOS": metrics.get("avg_length_of_stay"),
+        "Readmission rate %": metrics.get("readmission_rate_pct"),
+        "Unique patients": metrics.get("unique_patients"),
+        "Critical alerts": metrics.get("alerts_critical"),
+        "High alerts": metrics.get("alerts_high"),
     }])
 
     alert_rows = [
-        {"شدت": k, "تعداد": v}
+        {"Severity": k, "Count": v}
         for k, v in (metrics.get("alerts_by_severity") or {}).items()
     ]
     dept_rows = metrics.get("top_departments") or []
 
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        summary.to_excel(writer, sheet_name="خلاصه", index=False)
+        summary.to_excel(writer, sheet_name="Summary", index=False)
         if alert_rows:
-            pd.DataFrame(alert_rows).to_excel(writer, sheet_name="هشدارها", index=False)
+            pd.DataFrame(alert_rows).to_excel(writer, sheet_name="Alerts", index=False)
         if dept_rows:
-            pd.DataFrame(dept_rows).rename(columns={"department": "بخش", "cnt": "تعداد"}).to_excel(
-                writer, sheet_name="بخش‌ها", index=False,
+            pd.DataFrame(dept_rows).rename(columns={"department": "Department", "cnt": "Count"}).to_excel(
+                writer, sheet_name="Departments", index=False,
             )
 
     return buffer.getvalue()
@@ -179,7 +179,7 @@ def generate_weekly_html(metrics: dict[str, Any]) -> str:
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8"/>
-  <title>گزارش هفتگی — {escape(str(metrics.get('tenant_name', '')))}</title>
+  <title>Weekly report — {escape(str(metrics.get('tenant_name', '')))}</title>
   <style>
   body {{ font-family: Tahoma, sans-serif; max-width: 800px; margin: 2rem auto; color: #1e293b; }}
   h1 {{ color: #0891B2; border-bottom: 2px solid #0891B2; padding-bottom: 0.5rem; }}
@@ -192,17 +192,17 @@ def generate_weekly_html(metrics: dict[str, Any]) -> str:
   </style>
 </head>
 <body>
-  <h1>گزارش هفتگی مدیریتی — {escape(str(metrics.get('tenant_name', '')))}</h1>
-  <p>بازه: {metrics.get('period_start')} تا {metrics.get('period_end')}</p>
+  <h1>Weekly management report — {escape(str(metrics.get('tenant_name', '')))}</h1>
+  <p>Period: {metrics.get('period_start')} to {metrics.get('period_end')}</p>
   <div class="kpi">
-    <div><strong>{metrics.get('admissions_total', 0)}</strong>بستری</div>
-    <div><strong>{metrics.get('readmission_rate_pct', 0)}%</strong>بستری مجدد</div>
-    <div><strong>{metrics.get('alerts_critical', 0)}</strong>هشدار بحرانی</div>
+    <div><strong>{metrics.get('admissions_total', 0)}</strong>Admissions</div>
+    <div><strong>{metrics.get('readmission_rate_pct', 0)}%</strong>Readmission</div>
+    <div><strong>{metrics.get('alerts_critical', 0)}</strong>Critical alerts</div>
   </div>
-  <h2>هشدارها بر اساس شدت</h2>
-  <table><tr><th>شدت</th><th>تعداد</th></tr>{alert_rows or '<tr><td colspan=2>—</td></tr>'}</table>
-  <h2>پرترددترین بخش‌ها</h2>
-  <table><tr><th>بخش</th><th>تعداد</th></tr>{dept_rows or '<tr><td colspan=2>—</td></tr>'}</table>
+  <h2>Alerts by severity</h2>
+  <table><tr><th>Severity</th><th>Count</th></tr>{alert_rows or '<tr><td colspan=2>—</td></tr>'}</table>
+  <h2>Busiest departments</h2>
+  <table><tr><th>Department</th><th>Count</th></tr>{dept_rows or '<tr><td colspan=2>—</td></tr>'}</table>
 </body>
 </html>"""
 
@@ -242,7 +242,7 @@ def send_weekly_report_to_managers(tenant_id: str) -> dict[str, Any]:
     archive_path = archive_report(tenant_id, metrics, excel_bytes, pdf_bytes)
 
     html = generate_weekly_html(metrics)
-    subject = f"گزارش هفتگی BAREKAT — {metrics.get('tenant_name', tenant_id)}"
+    subject = f"BAREKAT Weekly Report — {metrics.get('tenant_name', tenant_id)}"
     attachments = [
         (f"weekly_{tenant_id}.xlsx", excel_bytes),
         (f"weekly_{tenant_id}.pdf", pdf_bytes),

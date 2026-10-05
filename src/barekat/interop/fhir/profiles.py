@@ -30,22 +30,22 @@ class FHIRProfile:
 # --- Iranian identifier systems ---
 IR_NATIONAL_ID = IdentifierSystem(
     system="http://fhir.salamat.org.ir/sid/national-id",
-    label="کد ملی",
+    label="National ID",
     region="IR",
 )
 IR_MEDICAL_CODE = IdentifierSystem(
     system="http://fhir.salamat.org.ir/sid/medical-code",
-    label="نظام پزشکی",
+    label="Medical Council number",
     region="IR",
 )
 IR_SALAMAT_ID = IdentifierSystem(
     system="http://fhir.salamat.org.ir/sid/salamat-insurance",
-    label="بیمه سلامت",
+    label="Salamat Insurance",
     region="IR",
 )
 IR_TAMIN_ID = IdentifierSystem(
     system="http://fhir.tamin.ir/sid/patient-id",
-    label="تأمین اجتماعی",
+    label="Social Security",
     region="IR",
 )
 IR_SEPAS_ID = IdentifierSystem(
@@ -77,7 +77,7 @@ FHIR_PROFILES: dict[str, FHIRProfile] = {
         key="iran_moh",
         name="Iran MOH / SEPAS",
         region="IR",
-        description="وزارت بهداشت — تبادل SEPAS، شناسه ملی و نظام پزشکی",
+        description="Ministry of Health — SEPAS exchange, national ID and medical council number",
         base_url_example="https://sepas-api.example.ir/fhir",
         identifier_systems=(IR_NATIONAL_ID, IR_MEDICAL_CODE, IR_SEPAS_ID),
         search_params={
@@ -91,7 +91,7 @@ FHIR_PROFILES: dict[str, FHIRProfile] = {
         key="iran_salamat",
         name="Salamat Insurance",
         region="IR",
-        description="بیمه سلامت ایران — FHIR R4",
+        description="Iran Salamat Insurance — FHIR R4",
         base_url_example="https://fhir.salamat.org.ir/r4",
         identifier_systems=(IR_NATIONAL_ID, IR_SALAMAT_ID),
         search_params={
@@ -105,7 +105,7 @@ FHIR_PROFILES: dict[str, FHIRProfile] = {
         key="iran_tamin",
         name="Tamin Ejtemaee",
         region="IR",
-        description="سازمان تأمین اجتماعی — FHIR",
+        description="Social Security Organization — FHIR",
         base_url_example="https://fhir.tamin.ir/r4",
         identifier_systems=(IR_NATIONAL_ID, IR_TAMIN_ID),
     ),

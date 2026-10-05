@@ -8,10 +8,10 @@ from dashboards.utils.data_loader import get_active_data_source
 from dashboards.utils.styles import render_hero
 
 SEVERITY_FA = {
-    "critical": "بحرانی",
-    "high": "بالا",
-    "medium": "متوسط",
-    "low": "پایین",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
 }
 
 
@@ -29,8 +29,8 @@ def _acknowledge(alert_id: int) -> bool:
 
 def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
     render_hero(
-        "هشدارهای پیش‌بینی‌کننده",
-        "هشدارهای واقعی از analytics.predictive_alerts پس از اجرای ML pipeline",
+        "Predictive alerts",
+        "Real alerts from analytics.predictive_alerts after running the ML pipeline",
     )
 
     user = get_current_user() or {}
@@ -38,9 +38,9 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
     can_ack = has_permission(role, "acknowledge_alerts")
     data_source = get_active_data_source()
 
-    st.caption(f"منبع داده: {data_source.upper()} | هشدارها: PostgreSQL")
+    st.caption(f"Data source: {data_source.upper()} | Alerts: PostgreSQL")
 
-    st.markdown("### هشدارهای بلادرنگ (WebSocket)")
+    st.markdown("### Real-time alerts (WebSocket)")
     try:
         from dashboards.utils.live_alerts import render_live_alert_feed
         render_live_alert_feed()
@@ -51,14 +51,14 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
         alerts = _load_db_alerts()
         using_db = True
     except Exception as exc:
-        st.warning(f"اتصال به PostgreSQL برای هشدارها برقرار نشد: {exc}")
+        st.warning(f"Could not connect to PostgreSQL for alerts: {exc}")
         alerts = pd.DataFrame()
         using_db = False
 
     if alerts.empty and using_db:
         st.info(
-            "هشدار فعالی در پایگاه داده نیست. ابتدا ETL و ML pipeline را اجرا کنید:\n\n"
-            "`python -m barekat.etl.pipeline` سپس `python -m barekat.ml.pipeline`"
+            "There are no active alerts in the database. First run the ETL and ML pipeline:\n\n"
+            "`python -m barekat.etl.pipeline` then `python -m barekat.ml.pipeline`"
         )
         return
 
@@ -68,23 +68,23 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
     severity_counts = alerts["severity"].value_counts() if "severity" in alerts.columns else pd.Series(dtype=int)
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("کل هشدارها", len(alerts))
+        st.metric("Total alerts", len(alerts))
     with c2:
-        st.metric("بحرانی", int(severity_counts.get("critical", 0)))
+        st.metric("Critical", int(severity_counts.get("critical", 0)))
     with c3:
-        st.metric("بالا", int(severity_counts.get("high", 0)))
+        st.metric("High", int(severity_counts.get("high", 0)))
     with c4:
-        st.metric("متوسط", int(severity_counts.get("medium", 0)))
+        st.metric("Medium", int(severity_counts.get("medium", 0)))
 
     severity_filter = st.multiselect(
-        "فیلتر شدت",
+        "Severity filter",
         options=["critical", "high", "medium", "low"],
         default=["critical", "high", "medium"],
         format_func=lambda x: SEVERITY_FA.get(x, x),
     )
 
     dept_options = sorted(alerts["department"].dropna().unique().tolist()) if "department" in alerts.columns else []
-    dept_filter = st.multiselect("فیلتر بخش", options=dept_options, default=dept_options)
+    dept_filter = st.multiselect("Department filter", options=dept_options, default=dept_options)
 
     filtered = alerts[alerts["severity"].isin(severity_filter)]
     if dept_filter and "department" in filtered.columns:
@@ -101,24 +101,24 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
                 <span class="badge {badge_class}">{severity_label}</span>
                 &nbsp; <strong>{row.get('message', '')}</strong><br>
                 <small>
-                بیمار: {row.get('patient_id', '-')} |
-                بستری: {row.get('admission_id', '-')} |
-                بخش: {row.get('department', '-')} |
-                ریسک: {float(risk):.0%}
+                Patient: {row.get('patient_id', '-')} |
+                Admission: {row.get('admission_id', '-')} |
+                Department: {row.get('department', '-')} |
+                Risk: {float(risk):.0%}
                 </small>
             </div>
             """,
             unsafe_allow_html=True,
         )
         if can_ack and row.get("alert_id"):
-            if st.button("تأیید هشدار", key=f"ack_{row['alert_id']}"):
+            if st.button("Approve alert", key=f"ack_{row['alert_id']}"):
                 if _acknowledge(int(row["alert_id"])):
-                    st.success("هشدار تأیید شد.")
+                    st.success("Alert approved.")
                     st.rerun()
                 else:
-                    st.error("تأیید هشدار ناموفق بود.")
+                    st.error("Alert approval failed.")
 
-    st.markdown("### جدول هشدارها")
+    st.markdown("### Alerts table")
     show_cols = [
         c for c in [
             "alert_id", "patient_id", "admission_id", "department",
@@ -132,4 +132,4 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
     st.dataframe(display, use_container_width=True, hide_index=True)
 
     csv = filtered[show_cols].to_csv(index=False).encode("utf-8-sig")
-    st.download_button("دانلود هشدارها (CSV)", csv, "barekat_alerts.csv", "text/csv")
+    st.download_button("Download alerts (CSV)", csv, "barekat_alerts.csv", "text/csv")

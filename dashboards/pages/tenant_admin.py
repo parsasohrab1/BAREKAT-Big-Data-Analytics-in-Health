@@ -37,17 +37,17 @@ def _api_get(path: str) -> dict | None:
 
 
 def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
-    render_hero("مدیریت مراکز (Multi-Tenancy)", "جداسازی داده، تنظیمات اختصاصی، billing و quota")
+    render_hero("Center Management (Multi-Tenancy)", "Data isolation, dedicated settings, billing and quota")
 
     user = get_current_user() or {}
     role = user.get("role", "viewer")
 
     if not has_permission(role, "manage_tenants") and not user.get("is_platform_admin"):
-        st.warning("فقط مدیر پلتفرم به این صفحه دسترسی دارد.")
+        st.warning("Only the platform administrator has access to this page.")
         return
 
     tab_tenants, tab_quota, tab_billing, tab_settings = st.tabs([
-        "مراکز", "Quota", "صورتحساب", "تنظیمات داشبورد",
+        "Centers", "Quota", "Billing", "Dashboard settings",
     ])
 
     with tab_tenants:
@@ -57,13 +57,13 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
             cols = [c for c in ["tenant_id", "name_fa", "plan_id", "status", "contact_email"] if c in df.columns]
             st.dataframe(df[cols], use_container_width=True, hide_index=True)
         else:
-            st.info("API در دسترس نیست — مراکز نمونه: default, tehran-general, isfahan-medical, mashhad-university")
+            st.info("API is not available — sample centers: default, tehran-general, isfahan-medical, mashhad-university")
 
         if user.get("is_platform_admin"):
-            st.markdown("#### تعویض مرکز (Platform Admin)")
+            st.markdown("#### Switch center (Platform Admin)")
             options = ["default", "tehran-general", "isfahan-medical", "mashhad-university"]
-            selected = st.selectbox("مرکز فعال", options, index=options.index(st.session_state.get("tenant_id", "default")))
-            if st.button("اعمال مرکز"):
+            selected = st.selectbox("Active center", options, index=options.index(st.session_state.get("tenant_id", "default")))
+            if st.button("Apply center"):
                 st.session_state["tenant_id"] = selected
                 user["tenant_id"] = selected
                 st.session_state["user"] = user
@@ -78,13 +78,13 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
                 st.markdown(f"**{metric}** — {q['used']:,} / {q['limit']:,}")
                 st.progress(pct / 100)
             if quota.get("any_exceeded"):
-                st.error("یک یا چند quota تجاوز شده است.")
+                st.error("One or more quotas have been exceeded.")
         else:
             st.markdown("""
-            | متریک | استارتر | حرفه‌ای | سازمانی |
+            | Metric | Starter | Professional | Enterprise |
             |-------|---------|---------|---------|
-            | بیماران | 5K | 25K | 100K |
-            | بستری | 20K | 100K | 500K |
+            | Patients | 5K | 25K | 100K |
+            | Admissions | 20K | 100K | 500K |
             | API calls/mo | 50K | 250K | 1M |
             """)
 
@@ -93,32 +93,32 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
         if billing:
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.metric("پایه ماهانه (USD)", f"${billing.get('base_monthly_usd', 0):.0f}")
+                st.metric("Monthly base (USD)", f"${billing.get('base_monthly_usd', 0):.0f}")
             with c2:
                 st.metric("Overage", f"${billing.get('overage_usd', 0):.2f}")
             with c3:
-                st.metric("تخمین کل", f"${billing.get('estimated_total_usd', 0):.2f}")
+                st.metric("Total estimate", f"${billing.get('estimated_total_usd', 0):.2f}")
         else:
-            st.info("اتصال به API برای مشاهده صورتحساب")
+            st.info("Connect to the API to view billing")
 
         plans = _api_get("/api/v1/tenants/plans")
         if plans and plans.get("plans"):
-            st.markdown("#### پلن‌های موجود")
+            st.markdown("#### Available plans")
             st.dataframe(pd.DataFrame(plans["plans"]), use_container_width=True, hide_index=True)
 
     with tab_settings:
         me = _api_get("/api/v1/tenants/me")
         if me:
             settings = me.get("settings", {})
-            st.markdown(f"**عنوان داشبورد:** {settings.get('dashboard_title', '—')}")
-            st.markdown(f"**رنگ اصلی:** `{settings.get('primary_color', '#0891B2')}`")
-            st.markdown(f"**صفحات فعال:** {', '.join(settings.get('enabled_pages', []))}")
-            st.markdown(f"**پروفایل FHIR:** {settings.get('fhir_profile', 'iran_moh')}")
+            st.markdown(f"**Dashboard title:** {settings.get('dashboard_title', '—')}")
+            st.markdown(f"**Primary color:** `{settings.get('primary_color', '#0891B2')}`")
+            st.markdown(f"**Active pages:** {', '.join(settings.get('enabled_pages', []))}")
+            st.markdown(f"**FHIR profile:** {settings.get('fhir_profile', 'iran_moh')}")
 
             with st.form("tenant_settings"):
-                title = st.text_input("عنوان داشبورد", value=settings.get("dashboard_title", ""))
-                color = st.color_picker("رنگ اصلی", settings.get("primary_color", "#0891B2"))
-                if st.form_submit_button("ذخیره"):
+                title = st.text_input("Dashboard title", value=settings.get("dashboard_title", ""))
+                color = st.color_picker("Primary color", settings.get("primary_color", "#0891B2"))
+                if st.form_submit_button("Save"):
                     try:
                         r = requests.patch(
                             f"{API_BASE}/api/v1/tenants/me/settings",
@@ -127,10 +127,10 @@ def render(data: dict, master: pd.DataFrame, kpis: dict) -> None:
                             timeout=10,
                         )
                         if r.status_code == 200:
-                            st.success("ذخیره شد")
+                            st.success("Saved")
                         else:
                             st.error(r.text[:200])
                     except requests.RequestException as exc:
                         st.error(str(exc))
         else:
-            st.info("تنظیمات از API بارگذاری نمی‌شود — در حالت dev از session tenant استفاده می‌شود.")
+            st.info("Settings are not loaded from the API — in dev mode the session tenant is used.")

@@ -1,10 +1,10 @@
 # BAREKAT - Big Data Analytics in Health
 
-پلتفرم تحلیل کلان‌داده سلامت برای پردازش و تحلیل داده‌های EHR، آزمایشگاه، تصاویر پزشکی (DICOM) و رویدادهای بالینی بلادرنگ (HL7/FHIR).
+A health big data analytics platform for processing and analyzing EHR data, laboratory data, medical images (DICOM) and real-time clinical events (HL7/FHIR).
 
-> **Roadmap:** داده ژنومیک و دستگاه‌های پوشیدنی در نسخه فعلی پیاده‌سازی نشده‌اند.
+> **Roadmap:** Genomic data and wearable devices are not implemented in the current version.
 
-## معماری زیرساخت
+## Infrastructure Architecture
 
 ```
 ┌─────────────┐    ┌──────────┐    ┌─────────────┐
@@ -26,104 +26,104 @@
 └─────────────┘    └──────────┘    └─────────────┘
 ```
 
-### سرویس‌ها
+### Services
 
-| سرویس | پورت | نقش |
+| Service | Port | Role |
 |--------|------|-----|
-| PostgreSQL | 5432 | انبار داده (Data Warehouse) |
-| MinIO | 9000/9001 | ذخیره‌سازی فایل (DICOM, HL7, CSV) |
-| Redis | 6379 | کش و session |
-| Kafka | 9092 | پردازش جریانی رویدادها |
-| Spark | 7077/8080 | پردازش توزیع‌شده |
-| API | 8000 | REST API با RBAC |
-| Dashboard | 8501 | داشبورد تحلیلی |
+| PostgreSQL | 5432 | Data Warehouse |
+| MinIO | 9000/9001 | File storage (DICOM, HL7, CSV) |
+| Redis | 6379 | Cache and session |
+| Kafka | 9092 | Streaming event processing |
+| Spark | 7077/8080 | Distributed processing |
+| API | 8000 | REST API with RBAC |
+| Dashboard | 8501 | Analytics dashboard |
 
-## راه‌اندازی سریع
+## Quick Start
 
-### پیش‌نیازها
+### Prerequisites
 
 - Python 3.11+
 - Docker & Docker Compose
-- Make (اختیاری)
+- Make (optional)
 
-### نصب
+### Installation
 
 ```bash
-# 1. کلون و نصب وابستگی‌ها
+# 1. Clone and install dependencies
 cp .env.example .env
 pip install -r requirements.txt
 pip install -e .
 
-# 2. راه‌اندازی زیرساخت Docker
+# 2. Start the Docker infrastructure
 docker compose up -d postgres minio redis
 
-# 3. تولید داده سنتتیک
+# 3. Generate synthetic data
 python scripts/generate_data.py --patients 1000 --admissions 3000
 
-# 4. اجرای ETL (incremental - پیش‌فرض)
+# 4. Run ETL (incremental - default)
 python -m barekat.etl.pipeline --mode incremental
 
-# یا بارگذاری کامل
+# Or full load
 python -m barekat.etl.pipeline --mode full
 
-# 5. آموزش مدل‌های ML
+# 5. Train the ML models
 python -m barekat.ml.pipeline
 
-# 6. راه‌اندازی API
+# 6. Start the API
 uvicorn barekat.api.main:app --reload --port 8000
 
-# 7. داشبورد
+# 7. Dashboard
 streamlit run dashboards/app.py
 ```
 
-### با Makefile
+### With the Makefile
 
 ```bash
-make setup          # نصب وابستگی‌ها
-make infra          # سرویس‌های Docker
-make generate-data  # تولید داده
+make setup          # install dependencies
+make infra          # Docker services
+make generate-data  # generate data
 make etl            # ETL incremental
 make etl-full       # ETL full reload
 make worker         # Celery worker
 make beat           # Celery Beat scheduler
-make train          # آموزش ML
-make api            # API سرور
-make dashboard      # داشبورد
-make test           # تست‌ها
+make train          # ML training
+make api            # API server
+make dashboard      # dashboard
+make test           # tests
 ```
 
-## ساختار پروژه
+## Project Structure
 
 ```
-├── docker/              # تنظیمات Docker
-│   ├── postgres/        # Schema پایگاه داده
+├── docker/              # Docker settings
+│   ├── postgres/        # Database schema
 │   ├── api/             # Dockerfile API
-│   └── dashboard/       # Dockerfile داشبورد
-├── src/barekat/         # کد اصلی
+│   └── dashboard/       # Dashboard Dockerfile
+├── src/barekat/         # main code
 │   ├── api/             # FastAPI endpoints
-│   ├── config/          # تنظیمات
-│   ├── etl/             # خط لوله ETL + validation + incremental
+│   ├── config/          # settings
+│   ├── etl/             # ETL pipeline + validation + incremental
 │   ├── worker/          # Celery Beat scheduling
-│   ├── ingestion/       # بارگذاری CSV/HL7/DICOM
-│   ├── ml/              # مدل‌های ML
-│   ├── security/        # احراز هویت و RBAC
+│   ├── ingestion/       # CSV/HL7/DICOM loading
+│   ├── ml/              # ML models
+│   ├── security/        # authentication and RBAC
 │   └── storage/         # PostgreSQL, MinIO, Redis, Kafka
-├── scripts/             # اسکریپت‌های کمکی
-├── dashboards/          # داشبورد حرفه‌ای Streamlit
-│   ├── app.py           # نقطه ورود داشبورد
-│   ├── pages/           # صفحات تحلیلی
-│   └── utils/           # بارگذاری داده، نمودار، ML
-├── data/                # داده‌های خام و پردازش‌شده
-└── tests/               # تست‌ها
+├── scripts/             # helper scripts
+├── dashboards/          # professional Streamlit dashboard
+│   ├── app.py           # dashboard entry point
+│   ├── pages/           # analytics pages
+│   └── utils/           # data loading, charts, ML
+├── data/                # raw and processed data
+└── tests/               # tests
 ```
 
 ## API
 
-مستندات API: `http://localhost:8000/docs`
+API documentation: `http://localhost:8000/docs`
 
-### احراز هویت
+### Authentication
 
-ورود از جدول `audit.users` با bcrypt انجام می‌شود. در production مقدار `AUTH_DEV_FALLBACK=false` باشد.
+Login is done from the `audit.users` table with bcrypt. In production, `AUTH_DEV_FALLBACK=false` should be set.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login \
@@ -131,245 +131,245 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
   -d '{"username": "admin", "password": "admin123"}'
 ```
 
-### Migration خودکار
+### Automatic Migration
 
-Migrationهای `docker/postgres/migrations/002` تا `013` به‌صورت خودکار در startup API (`DB_AUTO_MIGRATE=true`) یا با دستور زیر اعمال می‌شوند:
+The migrations `docker/postgres/migrations/002` through `013` are applied automatically at API startup (`DB_AUTO_MIGRATE=true`) or with the following command:
 
 ```bash
 make db-migrate
-# یا
-python scripts/apply_init_sql.py   # init.sql + همه migrationها (CI/تست)
+# or
+python scripts/apply_init_sql.py   # init.sql + all migrations (CI/test)
 ```
 
-### نقش‌های کاربری (RBAC)
+### User Roles (RBAC)
 
-| نقش | دسترسی‌ها |
+| Role | Permissions |
 |-----|-----------|
-| admin | مدیریت کامل، ETL، کاربران |
-| clinician | مشاهده PHI، هشدارها |
-| researcher | تحلیل، export |
-| viewer | فقط خواندن |
+| admin | Full management, ETL, users |
+| clinician | View PHI, alerts |
+| researcher | Analytics, export |
+| viewer | Read-only |
 
-## امنیت و حریم خصوصی
+## Security and Privacy
 
-- احراز هویت JWT
-- کنترل دسترسی مبتنی بر نقش (RBAC)
-- لاگ دسترسی در schema `audit`
-- رمزنگاری ارتباطات (TLS در production)
+- JWT authentication
+- Role-based access control (RBAC)
+- Access log in the `audit` schema
+- Communication encryption (TLS in production)
 
-## تولید داده سنتتیک
+## Synthetic Data Generation
 
-اسکریپت اصلی: `scripts/generate_data.py` (نسخه قبلی: `scripts/original_DATA.py`)
+Main script: `scripts/generate_data.py` (previous version: `scripts/original_DATA.py`)
 
-جداول: Patients, Admissions, Diagnoses, Medications, Lab_Results
+Tables: Patients, Admissions, Diagnoses, Medications, Lab_Results
 
-## ETL پیشرفته
+## Advanced ETL
 
-### زمان‌بندی خودکار (Celery Beat)
+### Automatic Scheduling (Celery Beat)
 
 ```bash
 # Docker
 docker compose up -d celery-worker celery-beat
 
 # Local
-make worker   # ترمینال ۱
-make beat     # ترمینال ۲
+make worker   # terminal 1
+make beat     # terminal 2
 ```
 
-| Job | زمان‌بندی | حالت |
+| Job | Schedule | Mode |
 |-----|----------|------|
-| `etl-incremental-hourly` | هر ساعت | incremental |
-| `etl-full-daily` | روزانه ساعت ۲ | full reload |
+| `etl-incremental-hourly` | Every hour | incremental |
+| `etl-full-daily` | Daily at 2 AM | full reload |
 
-### اعتبارسنجی Schema (Great Expectations)
+### Schema Validation (Great Expectations)
 
-قبل از بارگذاری، هر جدول با Great Expectations اعتبارسنجی می‌شود (null checks، محدوده سنی، یکتایی PK). در صورت شکست، ETL متوقف و در `audit.etl_runs` ثبت می‌شود.
+Before loading, each table is validated with Great Expectations (null checks, age range, PK uniqueness). On failure, the ETL stops and is recorded in `audit.etl_runs`.
 
 ```bash
 python -m barekat.etl.pipeline --mode incremental
-python -m barekat.etl.pipeline --mode full --skip-validation  # فقط توسعه
+python -m barekat.etl.pipeline --mode full --skip-validation  # development only
 ```
 
-### بارگذاری Incremental
+### Incremental Loading
 
-- رکوردهای جدید: `INSERT`
-- رکوردهای موجود: `UPSERT` (ON CONFLICT)
-- watermark در `staging.etl_watermarks`
-- حالت `full`: `TRUNCATE` + بارگذاری مجدد
+- New records: `INSERT`
+- Existing records: `UPSERT` (ON CONFLICT)
+- watermark in `staging.etl_watermarks`
+- `full` mode: `TRUNCATE` + reload
 
-### لاگ اجرا و Retry
+### Execution Log and Retry
 
-هر اجرا در `audit.etl_runs` ثبت می‌شود:
+Each run is recorded in `audit.etl_runs`:
 
 ```bash
 # API
 GET /api/v1/analytics/etl/runs
 
-# داشبورد → صفحه زیرساخت
+# Dashboard → Infrastructure page
 ```
 
-Celery در صورت خطا تا ۳ بار (قابل تنظیم) retry می‌کند.
+On error, Celery retries up to 3 times (configurable).
 
 ## MLOps
 
-### نسخه‌بندی مدل و متریک‌ها
+### Model Versioning and Metrics
 
-هر آموزش در `analytics.ml_model_registry` ثبت می‌شود:
+Each training run is recorded in `analytics.ml_model_registry`:
 
-- نسخه (`v20260713_003000`)
-- artifact در `data/models/{model_name}/{version}/`
-- متریک‌ها: AUC، F1، precision، recall، Brier score
-- داده calibration (reliability diagram)
+- Version (`v20260713_003000`)
+- artifact in `data/models/{model_name}/{version}/`
+- Metrics: AUC, F1, precision, recall, Brier score
+- calibration data (reliability diagram)
 
 ```bash
 python -m barekat.ml.pipeline
-python -m barekat.ml.pipeline --retrain   # داده جدید از PostgreSQL
+python -m barekat.ml.pipeline --retrain   # new data from PostgreSQL
 ```
 
-### مدل‌های پیشرفته
+### Advanced Models
 
-| مدل | کاربرد | API |
+| Model | Use | API |
 |-----|--------|-----|
-| **LOS** | برنامه‌ریزی تخت | `GET /api/v1/ml/predict/los` |
-| **مرگ‌ومیر / سپسیس** | هشدار زودهنگام | `GET /api/v1/ml/predict/early-warning` |
-| **NLP یادداشت پزشک** | استخراج تشخیص ICD | `POST /api/v1/ml/nlp/extract-diagnoses` |
-| **علائم حیاتی (time-series)** | مانیتورینگ لحظه‌ای | `GET /api/v1/ml/vitals/monitor/{admission_id}` |
+| **LOS** | Bed planning | `GET /api/v1/ml/predict/los` |
+| **Mortality / Sepsis** | Early warning | `GET /api/v1/ml/predict/early-warning` |
+| **Physician note NLP** | ICD diagnosis extraction | `POST /api/v1/ml/nlp/extract-diagnoses` |
+| **Vital signs (time-series)** | Real-time monitoring | `GET /api/v1/ml/vitals/monitor/{admission_id}` |
 
-داده‌های جدید: `clinical_notes.csv`, `vital_signs.csv` + فیلدهای `Mortality_Flag`, `Sepsis_Flag` در admissions.
+New data: `clinical_notes.csv`, `vital_signs.csv` + the fields `Mortality_Flag`, `Sepsis_Flag` in admissions.
 
 ```bash
 python scripts/generate_data.py --patients 1000 --admissions 3000
-python -m barekat.ml.pipeline   # آموزش همه مدل‌ها + تولید هشدار
+python -m barekat.ml.pipeline   # train all models + generate alerts
 ```
 
-### API مدل
+### Model API
 
-| Endpoint | نقش |
+| Endpoint | Role |
 |----------|-----|
-| `POST /api/v1/ml/train` | آموزش |
-| `POST /api/v1/ml/retrain` | retrain با داده جدید |
-| `GET /api/v1/ml/models` | لیست نسخه‌ها |
-| `GET /api/v1/ml/models/readmission/metrics` | متریک‌ها و calibration |
-| `GET /api/v1/ml/predict/readmission/explain/{admission_id}` | توضیح SHAP — چرا پرخطر؟ |
-| `GET /api/v1/ml/predict/readmission/report/{admission_id}` | گزارش HTML قابل چاپ |
-| `GET /api/v1/ml/thresholds` | آستانه per-department |
-| `PUT /api/v1/ml/thresholds/{department}` | تنظیم آستانه |
+| `POST /api/v1/ml/train` | Training |
+| `POST /api/v1/ml/retrain` | Retrain with new data |
+| `GET /api/v1/ml/models` | List versions |
+| `GET /api/v1/ml/models/readmission/metrics` | Metrics and calibration |
+| `GET /api/v1/ml/predict/readmission/explain/{admission_id}` | SHAP explanation — why high risk? |
+| `GET /api/v1/ml/predict/readmission/report/{admission_id}` | Printable HTML report |
+| `GET /api/v1/ml/thresholds` | Per-department thresholds |
+| `PUT /api/v1/ml/thresholds/{department}` | Set a threshold |
 
-### آستانه ریسک per-department
+### Per-Department Risk Threshold
 
-جدول `analytics.department_risk_thresholds` — هر بخش آستانه جداگانه دارد (مثلاً Cardiology: 0.75، Pediatrics: 0.65).
+The table `analytics.department_risk_thresholds` — each department has its own threshold (e.g., Cardiology: 0.75, Pediatrics: 0.65).
 
-### Retrain دوره‌ای
+### Periodic Retrain
 
-Celery Beat job `ml-retrain-weekly` — هر دوشنبه ساعت ۳ صبح (قابل تنظیم):
+Celery Beat job `ml-retrain-weekly` — every Monday at 3 AM (configurable):
 
 ```env
 ML_RETRAIN_DAY_OF_WEEK=0
 ML_RETRAIN_HOUR=3
 ```
 
-## داشبورد تحلیلی
+## Analytics Dashboard
 
-داشبورد حرفه‌ای Streamlit در `dashboards/app.py` تمام قابلیت‌های پلتفرم را نمایش می‌دهد.
+The professional Streamlit dashboard in `dashboards/app.py` shows all platform capabilities.
 
-**آدرس:** `http://localhost:8501`
+**Address:** `http://localhost:8501`
 
-### صفحات داشبورد
+### Dashboard Pages
 
-| صفحه | محتوا |
+| Page | Content |
 |------|--------|
-| نمای کلی | KPIها، gaugeها، روند بستری، جدول بستری‌های اخیر |
-| جمعیت بیماران | سن، BMI، دیابت، فشارخون، سیگار، گروه خونی |
-| بستری و بخش‌ها | توزیع بخش، LOS، ICU، نوع پذیرش |
-| تشخیص‌ها | ICD-10، تشخیص اصلی/فرعی، نقشه تشخیص-بخش |
-| داروها | داروهای پرتجویز، فرکانس مصرف، نقشه دارویی |
-| آزمایشگاه | نتایج غیرطبیعی، توزیع تست‌ها، هیستوگرام |
-| هوش تحلیلی ML | پیش‌بینی بستری مجدد، خوشه‌بندی، اهمیت ویژگی |
-| هشدارها | هشدارهای ریسک با سطح شدت و دانلود CSV |
-| مدیریت مراکز | سوییچ tenant، quota، billing، تنظیمات برندینگ (platform admin) |
-| گزارش‌های مدیریتی | گزارش هفتگی PDF/Excel، تنظیمات ایمیل/پیامک |
-| زیرساخت | وضعیت داده، معماری، کیفیت داده، قابلیت‌ها |
+| Overview | KPIs, gauges, admission trend, recent admissions table |
+| Patient Population | Age, BMI, diabetes, hypertension, smoking, blood type |
+| Admissions and Departments | Department distribution, LOS, ICU, admission type |
+| Diagnoses | ICD-10, primary/secondary diagnosis, diagnosis-department map |
+| Medications | Most-prescribed drugs, frequency of use, medication map |
+| Laboratory | Abnormal results, test distribution, histogram |
+| ML Analytics | Readmission prediction, clustering, feature importance |
+| Alerts | Risk alerts with severity levels and CSV download |
+| Center Management | Tenant switch, quota, billing, branding settings (platform admin) |
+| Management Reports | Weekly PDF/Excel report, email/SMS settings |
+| Infrastructure | Data status, architecture, data quality, capabilities |
 
-### فیلترهای سراسری
+### Global Filters
 
-از سایدبار می‌توانید بر اساس **بخش**، **جنسیت** و **نوع پذیرش** فیلتر کنید.
+From the sidebar you can filter by **department**, **gender** and **admission type**.
 
-### احراز هویت داشبورد
+### Dashboard Authentication
 
-داشبورد با JWT و RBAC محافظت می‌شود. پس از ورود، صفحات بر اساس نقش نمایش داده می‌شوند.
+The dashboard is protected with JWT and RBAC. After login, pages are displayed based on role.
 
-| کاربر | رمز | نقش | مرکز |
+| User | Password | Role | Center |
 |-------|-----|-----|------|
-| admin | admin123 | دسترسی کامل (platform admin) | default |
-| clinician | clinician123 | PHI + تأیید هشدار | tehran-general |
-| researcher | researcher123 | تحلیل و ML | isfahan-medical |
+| admin | admin123 | Full access (platform admin) | default |
+| clinician | clinician123 | PHI + alert approval | tehran-general |
+| researcher | researcher123 | Analytics and ML | isfahan-medical |
 
-### منبع داده
+### Data Source
 
-پس از ETL، داشبورد به‌صورت خودکار از **PostgreSQL** می‌خواند (`DASHBOARD_DATA_SOURCE=auto`).
+After ETL, the dashboard reads automatically from **PostgreSQL** (`DASHBOARD_DATA_SOURCE=auto`).
 
 ```bash
-# 1. تولید داده
+# 1. Generate data
 python scripts/generate_data.py --patients 1000 --admissions 3000
 
-# 2. ETL به PostgreSQL
+# 2. ETL to PostgreSQL
 python -m barekat.etl.pipeline
 
-# 3. ML + ذخیره هشدارها در analytics.predictive_alerts
+# 3. ML + store alerts in analytics.predictive_alerts
 python -m barekat.ml.pipeline
 
-# 4. اجرای داشبورد
+# 4. Run the dashboard
 streamlit run dashboards/app.py
 ```
 
-### هشدارهای واقعی
+### Real Alerts
 
-هشدارها پس از `python -m barekat.ml.pipeline` در جدول `analytics.predictive_alerts` ذخیره می‌شوند و در صفحه **هشدارها** نمایش داده می‌شوند. نقش `clinician` و `admin` می‌توانند هشدار را تأیید کنند.
+Alerts are stored in the `analytics.predictive_alerts` table after `python -m barekat.ml.pipeline` and are displayed on the **Alerts** page. The `clinician` and `admin` roles can approve an alert.
 
 streamlit run dashboards/app.py
 ```
 
-## تصاویر پزشکی (DICOM / PACS)
+## Medical Images (DICOM / PACS)
 
-علاوه بر metadata، اکنون اتصال PACS، thumbnail و viewer فعال است.
+In addition to metadata, PACS connection, thumbnails and the viewer are now active.
 
 ```
-PACS (C-ECHO/C-FIND یا Orthanc REST)
+PACS (C-ECHO/C-FIND or Orthanc REST)
         ↓ retrieve
    MinIO (dicom/*.dcm + thumbnails)
         ↓
    raw.dicom_studies + Dashboard Viewer
-        ↓ (فاز بعد)
-   CAD — تشخیص کمکی
+        ↓ (next phase)
+   CAD — computer-aided diagnosis
 ```
 
 ### API (`/api/v1/imaging`)
 
-| Endpoint | کاربرد |
+| Endpoint | Use |
 |----------|--------|
-| `POST /pacs/echo` | تست اتصال PACS (C-ECHO) |
-| `POST /pacs/query` | جستجوی مطالعات (C-FIND / Orthanc) |
-| `POST /pacs/retrieve` | دریافت study از PACS → MinIO |
-| `POST /upload` | آپلود فایل `.dcm` |
-| `GET /studies` | کاتالوگ مطالعات |
+| `POST /pacs/echo` | Test PACS connection (C-ECHO) |
+| `POST /pacs/query` | Search studies (C-FIND / Orthanc) |
+| `POST /pacs/retrieve` | Retrieve a study from PACS → MinIO |
+| `POST /upload` | Upload a `.dcm` file |
+| `GET /studies` | Studies catalog |
 | `GET /studies/{uid}/thumbnail` | PNG thumbnail |
-| `GET /studies/{uid}/viewer?window=&level=` | تصویر viewer با Window/Level |
-| `GET /studies/{uid}/cad` | CAD stub (فاز بعد) |
+| `GET /studies/{uid}/viewer?window=&level=` | Viewer image with Window/Level |
+| `GET /studies/{uid}/cad` | CAD stub (next phase) |
 
-### راه‌اندازی
+### Setup
 
 ```bash
-# تولید DICOM نمونه
+# Generate sample DICOM
 python scripts/generate_sample_dicom.py --output ./data/dicom --count 5
 
-# ingest به MinIO + PostgreSQL
+# ingest into MinIO + PostgreSQL
 python -c "from pathlib import Path; from barekat.imaging.store import ingest_directory; ingest_directory(Path('./data/dicom'))"
 
-# داشبورد → صفحه «تصاویر پزشکی»
+# Dashboard → "Medical Imaging" page
 streamlit run dashboards/app.py
 ```
 
-### تنظیمات PACS (`.env`)
+### PACS Settings (`.env`)
 
 ```env
 PACS_HOST=localhost
@@ -378,57 +378,57 @@ PACS_AE_TITLE=ORTHANC
 PACS_ORTHANC_URL=http://localhost:8042
 ```
 
-### CAD — فاز بعد
+### CAD — Next Phase
 
-مدل‌های برنامه‌ریزی‌شده: Chest X-ray (pneumothorax), CT (hemorrhage/PE), Mammography (mass).  
-فعلاً `CADAnalyzer` فقط stub برمی‌گرداند — برای تحقیق و توسعه، نه استفاده بالینی.
+Planned models: Chest X-ray (pneumothorax), CT (hemorrhage/PE), Mammography (mass).
+For now `CADAnalyzer` returns only a stub — for research and development, not clinical use.
 
-## انطباق و حریم خصوصی (HIPAA / GDPR / قوانین داخلی)
+## Compliance and Privacy (HIPAA / GDPR / Domestic Regulations)
 
 ```
-درخواست API / داشبورد
+API / dashboard request
         ↓ AuditMiddleware
-   audit.access_logs (چه کسی، چه زمانی، به چه داده‌ای)
+   audit.access_logs (who, when, which data)
         ↓
-   RBAC + view_phi (حداقل ضرورت)
+   RBAC + view_phi (minimum necessary)
         ↓
-   Retention Celery Beat → حذف خودکار داده منقضی
+   Retention Celery Beat → automatic deletion of expired data
 ```
 
-### چارچوب‌های پشتیبانی‌شده
+### Supported Frameworks
 
-| چارچوب | پوشش |
+| Framework | Coverage |
 |--------|------|
-| **HIPAA** | RBAC، audit trail، minimum necessary، de-identification |
-| **GDPR** | رضایت، حق حذف (erasure)، pseudonymization، retention |
-| **قوانین داخلی** | SEPAS، کد ملی (عدم ذخیره در analytics)، مصوبات وزارت بهداشت |
+| **HIPAA** | RBAC, audit trail, minimum necessary, de-identification |
+| **GDPR** | Consent, right to erasure, pseudonymization, retention |
+| **Domestic regulations** | SEPAS, national ID (not stored in analytics), Ministry of Health resolutions |
 
 ### API (`/api/v1/compliance`)
 
-| Endpoint | کاربرد |
+| Endpoint | Use |
 |----------|--------|
-| `GET /frameworks` | چارچوب‌های قانونی فعال |
-| `GET /summary` | خلاصه پوشش انطباق (admin) |
-| `GET /audit-logs` | لاگ دسترسی کامل |
-| `POST /pseudonymize/{id}` | شناسه‌سازی مجدد (reversible) |
-| `POST /anonymize/{id}` | ناشناس‌سازی (غیرقابل بازگشت) |
-| `POST /erasure/{id}` | حق حذف GDPR |
-| `GET /retention/policies` | سیاست نگهداری |
-| `POST /retention/purge` | حذف دستی داده منقضی |
-| `POST /consent` | ثبت رضایت‌نامه |
-| `POST /legal-hold` | توقیف قانونی (توقف حذف) |
-| `GET /export/deidentified` | خروجی تحقیقاتی de-ID |
+| `GET /frameworks` | Active legal frameworks |
+| `GET /summary` | Compliance coverage summary (admin) |
+| `GET /audit-logs` | Full access log |
+| `POST /pseudonymize/{id}` | Re-pseudonymization (reversible) |
+| `POST /anonymize/{id}` | Anonymization (irreversible) |
+| `POST /erasure/{id}` | GDPR right to erasure |
+| `GET /retention/policies` | Retention policy |
+| `POST /retention/purge` | Manual deletion of expired data |
+| `POST /consent` | Record a consent form |
+| `POST /legal-hold` | Legal hold (stop deletion) |
+| `GET /export/deidentified` | De-ID research export |
 
-### سیاست نگهداری پیش‌فرض
+### Default Retention Policy
 
-| دسته داده | مدت | مرجع |
+| Data category | Duration | Reference |
 |-----------|-----|------|
-| یادداشت بالینی | ۷ سال | HIPAA/GDPR/IR-MOH |
-| نتایج آزمایش | ۵ سال | HIPAA |
-| تصاویر DICOM | ۱۰ سال | IR-MOH |
-| لاگ دسترسی | ۶ سال | HIPAA/GDPR |
+| Clinical notes | 7 years | HIPAA/GDPR/IR-MOH |
+| Lab results | 5 years | HIPAA |
+| DICOM images | 10 years | IR-MOH |
+| Access log | 6 years | HIPAA/GDPR |
 
-### تنظیمات (`.env`)
+### Settings (`.env`)
 
 ```env
 AUDIT_ENABLED=true
@@ -440,9 +440,9 @@ RETENTION_PURGE_HOUR=4
 REQUIRE_CONSENT_FOR_RESEARCH=false
 ```
 
-داشبورد → صفحه **«انطباق و حریم خصوصی»** (فقط admin).
+Dashboard → **"Compliance and Privacy"** page (admin only).
 
-## امنیت زیرساخت (TLS / Secrets / MFA / WAF)
+## Infrastructure Security (TLS / Secrets / MFA / WAF)
 
 ```
 Client ──TLS──► Nginx (WAF + rate limit)
@@ -450,31 +450,31 @@ Client ──TLS──► Nginx (WAF + rate limit)
                     ├── dashboard.barekat.local → Streamlit
                     └── minio.barekat.local    → MinIO (SSE)
 
-Secrets: Docker Secrets (/run/secrets/*) یا HashiCorp Vault
+Secrets: Docker Secrets (/run/secrets/*) or HashiCorp Vault
 PHI at-rest: Fernet encryption (clinical_notes) + MinIO KMS
 Admin MFA: TOTP (Google Authenticator / Authy)
 ```
 
-### راه‌اندازی Secure Stack
+### Secure Stack Setup
 
 ```bash
-make secrets      # تولید فایل‌های secret در ./secrets/
-make tls-certs    # گواهی self-signed TLS
+make secrets      # generate secret files in ./secrets/
+make tls-certs    # self-signed TLS certificate
 make secure-up    # prod + docker-compose.secure.yml
 ```
 
-### Docker Secrets (جایگزین .env)
+### Docker Secrets (alternative to .env)
 
-| Secret | مسیر |
+| Secret | Path |
 |--------|------|
 | `jwt_secret` | `/run/secrets/jwt_secret` |
 | `postgres_password` | `/run/secrets/postgres_password` |
 | `phi_encryption_key` | `/run/secrets/phi_encryption_key` |
 | `minio_secret_key` | `/run/secrets/minio_secret_key` |
 
-Vault (اختیاری): `VAULT_ADDR` + `VAULT_TOKEN` → KV path `barekat`
+Vault (optional): `VAULT_ADDR` + `VAULT_TOKEN` → KV path `barekat`
 
-### MFA برای Admin
+### MFA for Admin
 
 ```bash
 # 1. Login as admin
@@ -485,59 +485,59 @@ Vault (اختیاری): `VAULT_ADDR` + `VAULT_TOKEN` → KV path `barekat`
 
 ### Rate Limiting & WAF
 
-| لایه | محافظت |
+| Layer | Protection |
 |------|--------|
-| **Nginx** | `limit_req`, bad-bot block, SQLi/XSS در query string |
+| **Nginx** | `limit_req`, bad-bot block, SQLi/XSS in the query string |
 | **FastAPI** | Redis rate limit (120/min API, 10/min login) |
 | **SecurityMiddleware** | WAF patterns, HSTS, CSP, X-Frame-Options |
 
-### رمزنگاری PHI at-rest
+### PHI At-Rest Encryption
 
 ```bash
-# فعال‌سازی
+# Enable
 PHI_ENCRYPTION_ENABLED=true
 PHI_ENCRYPTION_KEY_FILE=/run/secrets/phi_encryption_key
 
-# رمزنگاری یادداشت‌های موجود
+# Encrypt existing notes
 POST /api/v1/compliance/phi/encrypt
 ```
 
-## چندمستاجری (Multi-Tenancy)
+## Multi-Tenancy
 
-پلتفرم از چند بیمارستان/مرکز درمانی به‌صورت همزمان پشتیبانی می‌کند:
+The platform supports multiple hospitals/medical centers simultaneously:
 
-| قابلیت | توضیح |
+| Capability | Description |
 |--------|--------|
-| **جداسازی داده** | ستون `tenant_id` روی جداول `raw.*` و `analytics.*` + فیلتر خودکار در API و داشبورد |
-| **تنظیمات اختصاصی** | لوگو، رنگ اصلی، locale، timezone، صفحات فعال per-tenant |
-| **داشبورد اختصاصی** | برندینگ سایدبار و کش داده per-tenant |
-| **Billing & Quota** | پلن (starter/pro/enterprise)، سقف بیمار/API/ذخیره‌سازی، metering روزانه |
+| **Data isolation** | `tenant_id` column on `raw.*` and `analytics.*` tables + automatic filtering in the API and dashboard |
+| **Dedicated settings** | Logo, primary color, locale, timezone, active pages per-tenant |
+| **Dedicated dashboard** | Sidebar branding and per-tenant data cache |
+| **Billing & Quota** | Plan (starter/pro/enterprise), patient/API/storage limits, daily metering |
 
 ### Schema
 
 ```
-tenant.tenants          — مراکز (slug, plan, status)
+tenant.tenants          — centers (slug, plan, status)
 tenant.plans            — starter / pro / enterprise
-tenant.tenant_settings  — برندینگ و تنظیمات UI
-tenant.tenant_users     — نگاشت کاربر → tenant
-tenant.usage_records    — مصرف API (metering)
-tenant.usage_summary    — خلاصه روزانه
+tenant.tenant_settings  — branding and UI settings
+tenant.tenant_users     — user → tenant mapping
+tenant.usage_records    — API usage (metering)
+tenant.usage_summary    — daily summary
 ```
 
 ### Migration
 
 ```bash
-# پس از راه‌اندازی PostgreSQL
+# After PostgreSQL setup
 psql $DATABASE_URL -f docker/postgres/migrations/009_multi_tenancy.sql
 ```
 
-مراکز نمونه: `default`, `tehran-general`, `isfahan-medical`, `mashhad-university`
+Sample centers: `default`, `tehran-general`, `isfahan-medical`, `mashhad-university`
 
-### احراز هویت و Context
+### Authentication and Context
 
-JWT شامل `tenant_id` و `tenant_slug` است. Platform admin می‌تواند با هدر `X-Tenant-ID` بین مراکز جابه‌جا شود.
+The JWT includes `tenant_id` and `tenant_slug`. A platform admin can switch between centers with the `X-Tenant-ID` header.
 
-| کاربر | رمز | مرکز | نقش |
+| User | Password | Center | Role |
 |-------|-----|------|-----|
 | admin | admin123 | default | platform admin |
 | clinician | clinician123 | tehran-general | clinician |
@@ -548,44 +548,44 @@ MULTI_TENANCY_ENABLED=true
 DEFAULT_TENANT_ID=default
 ```
 
-### API مدیریت مراکز
+### Center Management API
 
-| Endpoint | نقش |
+| Endpoint | Role |
 |----------|-----|
-| `GET /api/v1/tenants` | لیست مراکز (platform admin) |
-| `GET /api/v1/tenants/{tenant_id}` | جزئیات + تنظیمات |
-| `PUT /api/v1/tenants/{tenant_id}/settings` | به‌روزرسانی برندینگ/UI |
-| `GET /api/v1/tenants/{tenant_id}/quota` | وضعیت سهمیه |
-| `GET /api/v1/tenants/{tenant_id}/billing` | برآورد هزینه ماهانه |
-| `GET /api/v1/tenants/{tenant_id}/usage` | مصرف روزانه |
+| `GET /api/v1/tenants` | List centers (platform admin) |
+| `GET /api/v1/tenants/{tenant_id}` | Details + settings |
+| `PUT /api/v1/tenants/{tenant_id}/settings` | Update branding/UI |
+| `GET /api/v1/tenants/{tenant_id}/quota` | Quota status |
+| `GET /api/v1/tenants/{tenant_id}/billing` | Monthly cost estimate |
+| `GET /api/v1/tenants/{tenant_id}/usage` | Daily usage |
 
-### داشبورد
+### Dashboard
 
-صفحه **«مدیریت مراکز»** (platform admin): سوییچر tenant، quota، billing، تنظیمات برندینگ.
+The **"Center Management"** page (platform admin): tenant switcher, quota, billing, branding settings.
 
-## گزارش‌های مدیریتی و اعلان‌ها
+## Management Reports and Notifications
 
-### گزارش هفتگی PDF/Excel
+### Weekly PDF/Excel Report
 
-هر یکشنبه ساعت ۸ صبح (Celery Beat) گزارش هفتگی برای مدیران هر مرکز تولید و ایمیل می‌شود.
+Every Sunday at 8 AM (Celery Beat) a weekly report is generated and emailed to the managers of each center.
 
-| Endpoint | نقش |
+| Endpoint | Role |
 |----------|-----|
-| `GET /api/v1/reports/weekly/summary` | خلاصه KPI هفته |
-| `GET /api/v1/reports/weekly/export/excel` | دانلود Excel |
-| `GET /api/v1/reports/weekly/export/pdf` | دانلود PDF |
-| `POST /api/v1/reports/weekly/trigger` | ارسال فوری (admin) |
-| `GET /api/v1/reports/weekly/archives` | آرشیو گزارش‌ها |
+| `GET /api/v1/reports/weekly/summary` | Weekly KPI summary |
+| `GET /api/v1/reports/weekly/export/excel` | Download Excel |
+| `GET /api/v1/reports/weekly/export/pdf` | Download PDF |
+| `POST /api/v1/reports/weekly/trigger` | Immediate send (admin) |
+| `GET /api/v1/reports/weekly/archives` | Report archive |
 
 ```bash
 psql $DATABASE_URL -f docker/postgres/migrations/010_notifications_reports.sql
 ```
 
-### ایمیل / پیامک هشدار critical
+### Critical Alert Email / SMS
 
-هشدارهای `critical` (و قابل تنظیم) به مدیران ارسال می‌شود:
+`critical` alerts (and configurable) are sent to managers:
 
-- **Batch ML** → پس از `persist_alerts`
+- **Batch ML** → after `persist_alerts`
 - **Streaming** → Faust / Redis → Celery `send_alert_notification`
 
 ```env
@@ -593,31 +593,31 @@ NOTIFICATIONS_ENABLED=true
 SMTP_HOST=smtp.gmail.com
 SMTP_USER=...
 SMTP_PASSWORD=...
-SMS_PROVIDER=kavenegar   # یا twilio
+SMS_PROVIDER=kavenegar   # or twilio
 KAVENEGAR_API_KEY=...
 ALERT_NOTIFY_MIN_SEVERITY=critical
 ```
 
-| Endpoint | نقش |
+| Endpoint | Role |
 |----------|-----|
-| `GET /api/v1/reports/notifications/preferences` | لیست گیرندگان |
-| `PUT /api/v1/reports/notifications/preferences` | افزودن/ویرایش |
-| `GET /api/v1/reports/notifications/log` | لاگ ارسال |
+| `GET /api/v1/reports/notifications/preferences` | List recipients |
+| `PUT /api/v1/reports/notifications/preferences` | Add/edit |
+| `GET /api/v1/reports/notifications/log` | Delivery log |
 
-### داشبورد موبایل (PWA)
+### Mobile Dashboard (PWA)
 
-اپلیکیشن وب قابل نصب روی iOS/Android:
+Web app installable on iOS/Android:
 
-- **آدرس:** `http://localhost:8000/mobile/`
+- **Address:** `http://localhost:8000/mobile/`
 - **Production:** `https://mobile.barekat.local/`
-- KPI، هشدارهای فعال، WebSocket بلادرنگ، دانلود گزارش هفتگی
-- Service Worker برای offline shell
+- KPI, active alerts, real-time WebSocket, weekly report download
+- Service Worker for the offline shell
 
-داشبورد Streamlit → صفحه **«گزارش‌های مدیریتی»**
+Streamlit dashboard → **"Management Reports"** page
 
 ## Observability (Prometheus + Grafana + Loki)
 
-پشته مانیتورینگ کامل برای production:
+A full monitoring stack for production:
 
 ```
 Services ──metrics──► Prometheus ──alert rules──► Alertmanager ──webhook──► API (email/SMS)
@@ -625,26 +625,26 @@ Services ──metrics──► Prometheus ──alert rules──► Alertmanag
      └──logs──► Promtail ──► Loki ──────────────► Grafana Dashboards
 ```
 
-### راه‌اندازی
+### Setup
 
 ```bash
 make observability-up
 ```
 
-| سرویس | آدرس | کاربرد |
+| Service | Address | Use |
 |--------|------|--------|
-| **Grafana** | http://localhost:3000 | داشبورد (admin / barekat_grafana) |
-| **Prometheus** | http://localhost:9090 | متریک‌ها + alert rules |
-| **Loki** | http://localhost:3100 | لاگ متمرکز |
+| **Grafana** | http://localhost:3000 | Dashboard (admin / barekat_grafana) |
+| **Prometheus** | http://localhost:9090 | Metrics + alert rules |
+| **Loki** | http://localhost:3100 | Centralized logs |
 
 ### Alert Rules
 
-| Alert | شرط | شدت |
+| Alert | Condition | Severity |
 |-------|------|-----|
-| `ETLJobFailed` | ETL failed در ۱ ساعت | critical |
-| `ETLStale` | بدون ETL موفق > ۲ ساعت | warning |
-| `ModelDriftDetected` | PSI یا AUC drop | critical |
-| `ModelAucDrop` | افت AUC > ۵٪ | warning |
+| `ETLJobFailed` | ETL failed within 1 hour | critical |
+| `ETLStale` | No successful ETL for > 2 hours | warning |
+| `ModelDriftDetected` | PSI or AUC drop | critical |
+| `ModelAucDrop` | AUC drop > 5% | warning |
 
 ```bash
 psql $DATABASE_URL -f docker/postgres/migrations/012_observability.sql
@@ -652,7 +652,7 @@ psql $DATABASE_URL -f docker/postgres/migrations/012_observability.sql
 
 ## Data Lake (MinIO — Bronze / Silver / Gold)
 
-برای Big Data واقعی، پلتفرم از معماری **Medallion** روی MinIO پشتیبانی می‌کند:
+For real Big Data, the platform supports a **Medallion** architecture on MinIO:
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -675,25 +675,25 @@ psql $DATABASE_URL -f docker/postgres/migrations/012_observability.sql
                     └─────────────────────────────────────────┘
 ```
 
-### لایه‌ها
+### Layers
 
-| لایه | مسیر MinIO | فرمت | محتوا |
+| Layer | MinIO path | Format | Content |
 |------|-----------|------|--------|
-| **Bronze** | `bronze/csv/{table}/dt=...` | Parquet | داده خام CSV، HL7/FHIR archive |
-| **Bronze** | `bronze/stream/events` | Delta | رویدادهای Kafka |
+| **Bronze** | `bronze/csv/{table}/dt=...` | Parquet | Raw CSV data, HL7/FHIR archive |
+| **Bronze** | `bronze/stream/events` | Delta | Kafka events |
 | **Silver** | `silver/health/{table}` | Delta/Iceberg | patients, admissions, ... |
 | **Gold** | `gold/marts/{mart}` | Delta/Iceberg | admission_summary, department_stats |
 
 ### Versioning (Delta / Iceberg)
 
 ```env
-LAKE_TABLE_FORMAT=delta      # یا iceberg
-LAKE_SPARK_ENABLED=true      # Spark batch روی cluster
+LAKE_TABLE_FORMAT=delta      # or iceberg
+LAKE_SPARK_ENABLED=true      # Spark batch on a cluster
 ```
 
-- **Delta Lake**: time-travel، ACID، `MERGE`/`OVERWRITE`
-- **Iceberg**: Hadoop catalog روی MinIO (`spark.sql.catalog.lake`)
-- متادیتا و نسخه جداول: `lake.table_registry` (PostgreSQL)
+- **Delta Lake**: time-travel, ACID, `MERGE`/`OVERWRITE`
+- **Iceberg**: Hadoop catalog on MinIO (`spark.sql.catalog.lake`)
+- Table metadata and versions: `lake.table_registry` (PostgreSQL)
 
 ### Migration
 
@@ -701,11 +701,11 @@ LAKE_SPARK_ENABLED=true      # Spark batch روی cluster
 psql $DATABASE_URL -f docker/postgres/migrations/011_data_lake.sql
 ```
 
-### اجرا
+### Running
 
 ```bash
-make lake                    # pandas fallback (بدون Spark)
-make lake-spark              # Spark + Delta روی MinIO
+make lake                    # pandas fallback (no Spark)
+make lake-spark              # Spark + Delta on MinIO
 make etl                     # ETL + auto bronze landing
 
 # Spark streaming → Delta bronze
@@ -714,80 +714,80 @@ spark-submit src/barekat/streaming/spark_streaming_job.py
 
 ### API
 
-| Endpoint | نقش |
+| Endpoint | Role |
 |----------|-----|
-| `GET /api/v1/lake/status` | وضعیت lake + جداول + jobs |
-| `GET /api/v1/lake/tables` | لیست جداول per-layer |
-| `POST /api/v1/lake/run/full` | pipeline کامل (Celery) |
+| `GET /api/v1/lake/status` | Lake status + tables + jobs |
+| `GET /api/v1/lake/tables` | List tables per-layer |
+| `POST /api/v1/lake/run/full` | Full pipeline (Celery) |
 | `POST /api/v1/lake/run/silver` | bronze → silver |
 | `POST /api/v1/lake/run/gold` | silver → gold |
 
-Celery Beat: `lake-batch-weekly` — دوشنبه ساعت ۱ صبح.
+Celery Beat: `lake-batch-weekly` — Monday at 1 AM.
 
-### وابستگی‌های Spark (اختیاری)
+### Spark Dependencies (optional)
 
 ```bash
 pip install -r requirements-spark.txt
 ```
 
-## هم‌کاری FHIR R4 (استاندارد مدرن)
+## FHIR R4 Interoperability (Modern Standard)
 
-علاوه بر HL7 v2، پلتفرم از **FHIR R4** با منابع اصلی پشتیبانی می‌کند:
+In addition to HL7 v2, the platform supports **FHIR R4** with the main resources:
 
-| Resource | کاربرد |
+| Resource | Use |
 |----------|--------|
-| **Patient** | شناسه ملی، نام فارسی/انگلیسی، demographics |
-| **Encounter** | بستری، بخش، نوع پذیرش |
-| **Observation** | علائم حیاتی، نتایج آزمایش (LOINC) |
-| **Condition** | تشخیص ICD-10، وضعیت بالینی |
+| **Patient** | National ID, Persian/English name, demographics |
+| **Encounter** | Admission, department, admission type |
+| **Observation** | Vital signs, lab results (LOINC) |
+| **Condition** | ICD-10 diagnosis, clinical status |
 
-### پروفایل‌های سیستم بیمارستانی
+### Hospital System Profiles
 
-| پروفایل | منطقه | سیستم |
+| Profile | Region | System |
 |---------|--------|--------|
-| `iran_moh` | ایران | وزارت بهداشت / SEPAS |
-| `iran_salamat` | ایران | بیمه سلامت |
-| `iran_tamin` | ایران | تأمین اجتماعی |
-| `international_us_core` | بین‌الملل | US Core R4 |
-| `international_ips` | بین‌الملل | International Patient Summary |
-| `international_epic` | بین‌الملل | Epic on FHIR |
-| `international_hapi` | بین‌الملل | HAPI FHIR (تست) |
+| `iran_moh` | Iran | Ministry of Health / SEPAS |
+| `iran_salamat` | Iran | Salamat Insurance |
+| `iran_tamin` | Iran | Social Security |
+| `international_us_core` | International | US Core R4 |
+| `international_ips` | International | International Patient Summary |
+| `international_epic` | International | Epic on FHIR |
+| `international_hapi` | International | HAPI FHIR (test) |
 
-### API هم‌کاری
+### Interoperability API
 
 ```bash
-# قابلیت‌ها و پروفایل‌ها
+# Capabilities and profiles
 GET /api/v1/fhir/capabilities
 GET /api/v1/fhir/profiles?region=IR
 
-# دریافت Bundle FHIR (Patient + Encounter + Observation + Condition)
+# Get a FHIR Bundle (Patient + Encounter + Observation + Condition)
 POST /api/v1/fhir/bundle
 {"bundle": {...}, "profile": "iran_salamat", "persist": true, "stream": true}
 
-# تست اتصال به سیستم بیمارستانی
+# Test connection to the hospital system
 POST /api/v1/fhir/connectors/test
 {"profile": "international_hapi", "base_url": "https://hapi.fhir.org/baseR4"}
 
-# همگام‌سازی از سیستم خارجی (با کد ملی)
+# Sync from the external system (with national ID)
 POST /api/v1/fhir/connectors/sync
 {"profile": "iran_salamat", "national_id": "0012345678", "persist": true}
 ```
 
-### جریان داده
+### Data Flow
 
 ```
-سیستم بیمارستانی (SEPAS / Epic / HAPI)
+Hospital system (SEPAS / Epic / HAPI)
         ↓ FHIR REST
    HospitalFHIRConnector
         ↓ parse + normalize
    raw.patients / admissions / diagnoses / lab_results
         ↓
-   Kafka → Faust → هشدار WebSocket
+   Kafka → Faust → WebSocket alert
 ```
 
-## پردازش جریانی بلادرنگ (Kafka + Faust)
+## Real-Time Stream Processing (Kafka + Faust)
 
-زیرساخت Kafka از قبل وجود داشت؛ اکنون ingest، پردازش و هشدار WebSocket فعال است.
+The Kafka infrastructure already existed; ingestion, processing and WebSocket alerts are now active.
 
 ```
 HL7/FHIR → API Ingest → Kafka (health.events.raw)
@@ -799,82 +799,82 @@ HL7/FHIR → API Ingest → Kafka (health.events.raw)
                     WebSocket → Dashboard
 ```
 
-### Ingest بلادرنگ
+### Real-Time Ingest
 
-| Endpoint | توضیح |
+| Endpoint | Description |
 |----------|--------|
-| `POST /api/v1/ingest/hl7` | پیام HL7 v2.x (JSON: `{"message": "MSH|..."}`) |
-| `POST /api/v1/ingest/hl7/raw` | body خام text/plain |
-| `POST /api/v1/ingest/fhir` | منبع FHIR JSON (Patient, Encounter, Observation) |
+| `POST /api/v1/ingest/hl7` | HL7 v2.x message (JSON: `{"message": "MSH|..."}`) |
+| `POST /api/v1/ingest/hl7/raw` | Raw text/plain body |
+| `POST /api/v1/ingest/fhir` | FHIR JSON resource (Patient, Encounter, Observation) |
 
-### پردازش جریانی
+### Stream Processing
 
-- **Faust** (پیش‌فرض): `make faust` یا سرویس Docker `faust-worker`
-- **Spark Streaming** (اختیاری): `src/barekat/streaming/spark_streaming_job.py` — نیاز به `pyspark`
+- **Faust** (default): `make faust` or the Docker service `faust-worker`
+- **Spark Streaming** (optional): `src/barekat/streaming/spark_streaming_job.py` — requires `pyspark`
 
-Faust رویدادها را نرمال‌سازی می‌کند، قوانین vitals را ارزیابی می‌کند و هشدار تولید می‌کند.
+Faust normalizes events, evaluates vitals rules and generates alerts.
 
-### هشدار بلادرنگ در داشبورد
+### Real-Time Alerts on the Dashboard
 
 - WebSocket: `ws://localhost:8000/api/v1/stream/alerts`
 - REST fallback: `GET /api/v1/stream/alerts/recent`
-- صفحه **هشدارها** در داشبورد — پنل WebSocket زنده
+- **Alerts** page on the dashboard — live WebSocket panel
 
-### شبیه‌سازی
+### Simulation
 
 ```bash
-# 1. زیرساخت
+# 1. Infrastructure
 make infra
-make up   # شامل faust-worker
+make up   # includes faust-worker
 
-# 2. دریافت JWT
+# 2. Get a JWT
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 
-# 3. ارسال رویدادهای نمونه
+# 3. Send sample events
 python scripts/simulate_stream.py --token <JWT> --count 20 --interval 0.5
 ```
 
 ### Kafka Topics
 
-| Topic | نقش |
+| Topic | Role |
 |-------|-----|
-| `health.events.raw` | رویدادهای نرمال‌شده HL7/FHIR |
-| `health.hl7` | کپی رویدادهای HL7 |
-| `health.fhir` | کپی رویدادهای FHIR |
-| `health.alerts` | هشدارهای تولیدشده |
+| `health.events.raw` | Normalized HL7/FHIR events |
+| `health.hl7` | Copy of HL7 events |
+| `health.fhir` | Copy of FHIR events |
+| `health.alerts` | Generated alerts |
 
-### اجرا (فقط CSV)
+### Execution (CSV only)
 
 ```bash
-# اگر PostgreSQL در دسترس نیست
+# If PostgreSQL is not available
 set DASHBOARD_DATA_SOURCE=csv
 streamlit run dashboards/app.py
 ```
 
-## CI/CD و محیط‌ها
+## CI/CD and Environments
 
 [![CI](https://github.com/parsasohrab1/BAREKAT-Big-Data-Analytics-in-Health/actions/workflows/ci.yml/badge.svg)](https://github.com/parsasohrab1/BAREKAT-Big-Data-Analytics-in-Health/actions/workflows/ci.yml)
 
 ### GitHub Actions
 
-فایل `.github/workflows/ci.yml` چهار job اجرا می‌کند:
+The file `.github/workflows/ci.yml` runs four jobs:
 
-| Job | محتوا |
+| Job | Content |
 |-----|--------|
 | **lint** | `ruff check` |
-| **unit-test** | تست‌های واحد (بدون PostgreSQL) |
-| **integration-test** | تست یکپارچگی ETL و API با سرویس PostgreSQL |
-| **docker-build** | ساخت imageهای API، Dashboard و Worker |
+| **unit-test** | Unit tests (without PostgreSQL) |
+| **integration-test** | ETL and API integration tests with a PostgreSQL service |
+| **docker-build** | Build the API, Dashboard and Worker images |
 
-### تست‌ها
+### Tests
 
 ```bash
-# تست واحد (پیش‌فرض — integration skip می‌شود)
+# Unit test (default — integration is skipped)
 make test
 
-# تست یکپارچگی (نیاز به PostgreSQL)
+# Integration test (requires PostgreSQL)
 export POSTGRES_DB=barekat_health_test
 python scripts/apply_init_sql.py
 make test-integration
@@ -883,16 +883,16 @@ make test-integration
 make lint
 ```
 
-تست‌های یکپارچگی در `tests/integration/`:
+Integration tests are in `tests/integration/`:
 
-- **ETL**: بارگذاری CSV نمونه → `ETLPipeline` → بررسی `raw.*` و `audit.etl_runs`
-- **API**: `/health`، login JWT، `/api/v1/analytics/summary`، `/api/v1/analytics/etl/runs`
+- **ETL**: load sample CSV → `ETLPipeline` → check `raw.*` and `audit.etl_runs`
+- **API**: `/health`, JWT login, `/api/v1/analytics/summary`, `/api/v1/analytics/etl/runs`
 
-### محیط Staging (جدا از Production)
+### Staging Environment (separate from Production)
 
-پورت‌ها و volumeهای جدا — بدون تداخل با development:
+Separate ports and volumes — no conflict with development:
 
-| سرویس | Development | Staging |
+| Service | Development | Staging |
 |--------|-------------|---------|
 | PostgreSQL | 5432 | **5433** |
 | API | 8000 | **8001** |
@@ -901,21 +901,21 @@ make lint
 
 ```bash
 cp .env.staging.example .env.staging
-# ویرایش رمزها
+# Edit the passwords
 make staging-up
 ```
 
-### محیط Production
+### Production Environment
 
 ```bash
 cp .env.production.example .env.production
-# تنظیم JWT_SECRET و رمزهای قوی
+# Set JWT_SECRET and strong passwords
 make prod-up
 ```
 
-تفاوت‌های کلیدی production:
+Key production differences:
 
 - `BAREKAT_ENV=production`
-- بدون bind mount سورس کد
+- No source code bind mount
 - `restart: unless-stopped`
-- PostgreSQL فقط در شبکه داخلی Docker (بدون expose عمومی)
+- PostgreSQL only on the internal Docker network (no public exposure)

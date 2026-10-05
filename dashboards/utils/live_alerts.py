@@ -15,7 +15,7 @@ def render_live_alert_feed(api_base: str | None = None, height: int = 320) -> No
         f"""
         <div style="font-family: Tahoma, sans-serif; direction: rtl;">
           <div id="status" style="padding:8px; background:#f0f9ff; border-radius:8px; margin-bottom:8px;">
-            در حال اتصال به WebSocket...
+            Connecting to WebSocket...
           </div>
           <div id="feed" style="max-height:{height - 60}px; overflow-y:auto;"></div>
         </div>
@@ -26,15 +26,15 @@ def render_live_alert_feed(api_base: str | None = None, height: int = 320) -> No
         const colors = {{critical:'#fee2e2', high:'#ffedd5', medium:'#fef9c3', low:'#ecfccb'}};
 
         ws.onopen = () => {{
-          status.textContent = 'متصل — هشدارهای بلادرنگ فعال';
+          status.textContent = 'Connected — real-time alerts active';
           status.style.background = '#dcfce7';
         }};
         ws.onclose = () => {{
-          status.textContent = 'قطع اتصال WebSocket';
+          status.textContent = 'WebSocket disconnected';
           status.style.background = '#fee2e2';
         }};
         ws.onerror = () => {{
-          status.textContent = 'خطا در اتصال WebSocket';
+          status.textContent = 'WebSocket connection error';
           status.style.background = '#fee2e2';
         }};
         ws.onmessage = (evt) => {{
@@ -43,7 +43,7 @@ def render_live_alert_feed(api_base: str | None = None, height: int = 320) -> No
             const div = document.createElement('div');
             const sev = alert.severity || 'medium';
             div.style.cssText = `padding:10px; margin:6px 0; border-radius:8px; background:${{colors[sev] || '#f8fafc'}}; border-right:4px solid #0891b2;`;
-            div.innerHTML = `<strong>[${{sev}}]</strong> ${{alert.message || ''}}<br><small>بیمار: ${{alert.patient_id || '-'}} | ریسک: ${{((alert.risk_score||0)*100).toFixed(0)}}%</small>`;
+            div.innerHTML = `<strong>[${{sev}}]</strong> ${{alert.message || ''}}<br><small>Patient: ${{alert.patient_id || '-'}} | Risk: ${{((alert.risk_score||0)*100).toFixed(0)}}%</small>`;
             feed.prepend(div);
             while (feed.children.length > 30) feed.removeChild(feed.lastChild);
           }} catch (e) {{}}

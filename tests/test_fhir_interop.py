@@ -31,7 +31,7 @@ def test_fhir_patient_iranian_identifier():
             "system": "http://fhir.salamat.org.ir/sid/national-id",
             "value": "0012345678",
         }],
-        "name": [{"family": "احمدی", "given": ["علی"], "use": "official"}],
+        "name": [{"family": "Ahmadi", "given": ["Ali"], "use": "official"}],
         "gender": "male",
         "birthDate": "1985-03-15",
     }

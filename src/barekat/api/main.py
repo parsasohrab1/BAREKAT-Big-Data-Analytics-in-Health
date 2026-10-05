@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="BAREKAT Health Analytics API",
-    description="پلتفرم تحلیل کلان‌داده سلامت - API",
+    description="Health Big Data Analytics Platform - API",
     version=__version__,
     lifespan=lifespan,
 )
