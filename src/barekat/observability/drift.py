@@ -144,7 +144,7 @@ def _persist_drift_event(result: dict[str, Any]) -> None:
                 text("""
                     INSERT INTO observability.drift_events
                         (model_name, auc_drop, psi, drift_detected, details)
-                    VALUES (:model_name, :auc_drop, :psi, :drift_detected, :details::jsonb)
+                    VALUES (:model_name, :auc_drop, :psi, :drift_detected, CAST(:details AS jsonb))
                 """),
                 {
                     "model_name": result["model_name"],

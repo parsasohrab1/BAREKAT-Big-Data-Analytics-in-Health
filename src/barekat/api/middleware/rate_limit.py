@@ -6,6 +6,7 @@ import time
 from typing import Callable
 
 from fastapi import Request, Response
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -31,7 +32,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         window = 60
 
         key = f"ratelimit:{client_ip}:{path}"
-        allowed = _check_rate(key, limit, window)
+        allowed = await run_in_threadpool(_check_rate, key, limit, window)
 
         if not allowed:
             return JSONResponse(
@@ -45,12 +46,23 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def _check_rate(key: str, limit: int, window: int) -> bool:
-    try:
+_redis_client = None
+
+
+def _get_redis():
+    """One pooled client per process instead of a fresh connection per request."""
+    global _redis_client
+    if _redis_client is None:
         import redis
 
         settings = get_settings()
-        r = redis.Redis(host=settings.redis_host, port=settings.redis_port, decode_responses=True)
+        _redis_client = redis.Redis(host=settings.redis_host, port=settings.redis_port, decode_responses=True)
+    return _redis_client
+
+
+def _check_rate(key: str, limit: int, window: int) -> bool:
+    try:
+        r = _get_redis()
         pipe = r.pipeline()
         now = time.time()
         pipe.zremrangebyscore(key, 0, now - window)

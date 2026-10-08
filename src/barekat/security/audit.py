@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import uuid
 from datetime import datetime
@@ -11,6 +12,17 @@ from sqlalchemy import text
 
 from barekat.config.settings import get_settings
 from barekat.storage.database import engine
+
+
+def _valid_ip(value: str | None) -> str | None:
+    """Return value only if it is a real IP; the column is INET and a bad value must not drop the audit row."""
+    if not value:
+        return None
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return None
+    return value
 
 
 def _resolve_user_id(username: str | None) -> int | None:
@@ -72,7 +84,7 @@ def log_access(
             "status_code": status_code,
             "request_id": request_id or str(uuid.uuid4()),
             "user_agent": user_agent,
-            "ip_address": ip_address,
+            "ip_address": _valid_ip(ip_address),
             "details": json.dumps(details or {}),
         }).scalar()
     return int(log_id) if log_id else None

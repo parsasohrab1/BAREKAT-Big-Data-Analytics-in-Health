@@ -80,6 +80,9 @@ class DataTransformer:
         df[col] = pd.to_datetime(df[col])
     df["icu_required"] = df["icu_required"].astype(bool)
     df["readmission_flag"] = df["readmission_flag"].astype(bool)
+    for flag in ("Mortality_Flag", "Sepsis_Flag"):
+      if flag in df.columns:
+        df[flag.lower()] = df.pop(flag).astype(bool)
     return df
 
   def clean_diagnoses(self, df: pd.DataFrame) -> pd.DataFrame:

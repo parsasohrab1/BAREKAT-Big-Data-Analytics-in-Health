@@ -69,3 +69,7 @@ htmlcov/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# TRL 5 validation run artifacts
+docs/trl5/api.log
+docs_trl5_run.log

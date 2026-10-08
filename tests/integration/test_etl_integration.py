@@ -16,7 +16,8 @@ def test_etl_incremental_load(integration_env):
     result = pipeline.run(mode="incremental", skip_validation=True)
 
     assert result["status"] == "success"
-    assert result["records_loaded"]["patients"] >= 2
+    loaded = result["records_loaded"]["patients"]
+    assert (loaded["total"] if isinstance(loaded, dict) else loaded) >= 2
 
     with engine.connect() as conn:
         patient_count = conn.execute(text("SELECT COUNT(*) FROM raw.patients")).scalar()

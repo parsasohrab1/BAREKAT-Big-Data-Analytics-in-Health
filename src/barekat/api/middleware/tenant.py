@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from fastapi import Request, Response
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from barekat.security.auth import decode_token
@@ -26,13 +27,13 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 # JWT may carry tenant_id directly (post-login)
                 jwt_tenant = payload.get("tenant_id")
                 req_tid = requested_tenant or jwt_tenant
-                ctx = resolve_user_tenant(username, req_tid)
+                ctx = await run_in_threadpool(resolve_user_tenant, username, req_tid)
             except ValueError:
                 pass
 
         if ctx is None and requested_tenant:
             from barekat.tenant.repository import get_tenant, _build_context
-            tenant = get_tenant(requested_tenant)
+            tenant = await run_in_threadpool(get_tenant, requested_tenant)
             if tenant:
                 ctx = _build_context(tenant)
 
@@ -41,7 +42,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         if ctx and request.url.path.startswith("/api/"):
             try:
-                record_usage(ctx.tenant_id, METRIC_API_CALLS, 1, {
+                await run_in_threadpool(record_usage, ctx.tenant_id, METRIC_API_CALLS, 1, {
                     "path": request.url.path,
                     "method": request.method,
                 })

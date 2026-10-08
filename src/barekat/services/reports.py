@@ -221,7 +221,7 @@ def archive_report(tenant_id: str, metrics: dict[str, Any], excel_bytes: bytes, 
             text("""
                 INSERT INTO reports.weekly_archives
                     (tenant_id, period_start, period_end, excel_path, pdf_path, metrics)
-                VALUES (:tenant_id, :period_start, :period_end, :excel_path, :pdf_path, :metrics::jsonb)
+                VALUES (:tenant_id, :period_start, :period_end, :excel_path, :pdf_path, CAST(:metrics AS jsonb))
             """),
             {
                 "tenant_id": tenant_id,

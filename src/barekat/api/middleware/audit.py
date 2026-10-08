@@ -6,6 +6,7 @@ import re
 from typing import Callable
 
 from fastapi import Request, Response
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from barekat.config.settings import get_settings
@@ -68,7 +69,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             action = f"denied_{action}" if response.status_code in (401, 403) else action
 
         try:
-            log_access(
+            await run_in_threadpool(
+                log_access,
                 action=action,
                 resource=path,
                 username=username,

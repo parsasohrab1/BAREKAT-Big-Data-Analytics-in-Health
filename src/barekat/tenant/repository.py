@@ -79,7 +79,8 @@ def _user_memberships(username: str) -> list[dict[str, Any]]:
     query = text("""
         SELECT tenant_id, role, is_primary FROM tenant.tenant_users
         WHERE username = :username
-    """)
+        ORDER BY is_primary DESC, (tenant_id = 'default') ASC, tenant_id ASC
+    """)  # deterministic: seeds can mark several rows primary; a specific tenant outranks the catch-all
     try:
         with engine.connect() as conn:
             rows = conn.execute(query, {"username": username}).mappings().all()

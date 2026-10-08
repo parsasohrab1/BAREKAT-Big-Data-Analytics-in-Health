@@ -13,30 +13,30 @@ def build_admission_frame(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
     diag_counts = (
         data["Diagnoses"].groupby("Admission_ID").size().reset_index(name="diagnosis_count")
     )
-    diag_counts.columns = ["admission_id", "diagnosis_count"]
+    diag_counts.columns = ["Admission_ID", "diagnosis_count"]
 
     med_counts = (
         data["Medications"].groupby("Admission_ID").size().reset_index(name="medication_count")
     )
-    med_counts.columns = ["admission_id", "medication_count"]
+    med_counts.columns = ["Admission_ID", "medication_count"]
 
     lab_df = data.get("Lab_Results", pd.DataFrame())
     if not lab_df.empty:
         lab_counts = lab_df.groupby("Admission_ID").size().reset_index(name="lab_test_count")
-        lab_counts.columns = ["admission_id", "lab_test_count"]
+        lab_counts.columns = ["Admission_ID", "lab_test_count"]
         abnormal = (
             lab_df.groupby("Admission_ID")["Abnormal_Flag"].mean().reset_index(name="abnormal_lab_rate")
         )
-        abnormal.columns = ["admission_id", "abnormal_lab_rate"]
+        abnormal.columns = ["Admission_ID", "abnormal_lab_rate"]
     else:
-        lab_counts = pd.DataFrame(columns=["admission_id", "lab_test_count"])
-        abnormal = pd.DataFrame(columns=["admission_id", "abnormal_lab_rate"])
+        lab_counts = pd.DataFrame(columns=["Admission_ID", "lab_test_count"])
+        abnormal = pd.DataFrame(columns=["Admission_ID", "abnormal_lab_rate"])
 
     df = admissions.merge(patients, on="Patient_ID", how="left")
-    df = df.merge(diag_counts, left_on="Admission_ID", right_on="admission_id", how="left")
-    df = df.merge(med_counts, left_on="Admission_ID", right_on="admission_id", how="left", suffixes=("", "_med"))
-    df = df.merge(lab_counts, left_on="Admission_ID", right_on="admission_id", how="left", suffixes=("", "_lab"))
-    df = df.merge(abnormal, left_on="Admission_ID", right_on="admission_id", how="left", suffixes=("", "_abn"))
+    df = df.merge(diag_counts, on="Admission_ID", how="left")
+    df = df.merge(med_counts, on="Admission_ID", how="left")
+    df = df.merge(lab_counts, on="Admission_ID", how="left")
+    df = df.merge(abnormal, on="Admission_ID", how="left")
     df = df.fillna(0)
     df.columns = [c.lower() for c in df.columns]
     return df

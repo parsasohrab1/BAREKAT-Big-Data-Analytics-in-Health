@@ -54,7 +54,8 @@ class ETLPipeline:
             "lab_results": "Lab_Results",
         }
         raw = self.ingestor.load_all()
-        return {csv_tables[k]: v for k, v in raw.items()}
+        # clinical_notes / vital_signs feed ML only; they have no warehouse load path here
+        return {csv_tables[k]: v for k, v in raw.items() if k in csv_tables}
 
     def transform(self, data: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         cleaned = {}

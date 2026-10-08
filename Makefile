@@ -1,4 +1,4 @@
-.PHONY: help setup infra observability-up up down staging-up prod-up secure-up db-migrate generate-data sample-dicom ingest-dicom etl etl-full lake lake-spark worker beat faust stream-simulate train api dashboard test test-integration lint clean secrets tls-certs
+.PHONY: help setup infra observability-up up down staging-up prod-up secure-up db-migrate generate-data sample-dicom ingest-dicom etl etl-full lake lake-spark worker beat faust stream-simulate train api dashboard test test-integration lint clean secrets tls-certs validate-trl5
 
 help:
 	@echo "BAREKAT Health Analytics - Available commands:"
@@ -30,6 +30,7 @@ help:
 	@echo "  make lint               - Run ruff linter"
 	@echo "  make test               - Run unit tests"
 	@echo "  make test-integration   - Run integration tests (requires PostgreSQL)"
+	@echo "  make validate-trl5      - Run TRL 5 validation in a clean container against the live stack"
 	@echo "  make clean              - Clean generated data"
 
 setup:
@@ -122,3 +123,8 @@ lint:
 
 clean:
 	rm -rf data/raw/*.csv data/processed/* data/models/*
+
+validate-trl5:
+	docker compose up -d postgres minio redis zookeeper kafka
+	docker build -f docker/validate/Dockerfile -t barekat-validate .
+	docker run --rm --network barekat-big-data-analytics-in-health_barekat-net -v "$(CURDIR):/app" 		-e POSTGRES_HOST=postgres -e POSTGRES_PORT=5432 -e POSTGRES_DB=barekat_health 		-e REDIS_HOST=redis -e REDIS_PORT=6379 -e MINIO_ENDPOINT=minio:9000 		-e MINIO_ACCESS_KEY=barekat_minio -e MINIO_SECRET_KEY=barekat_minio_secret 		-e KAFKA_BOOTSTRAP_SERVERS=kafka:29092 -e LAKE_ENABLED=true 		barekat-validate

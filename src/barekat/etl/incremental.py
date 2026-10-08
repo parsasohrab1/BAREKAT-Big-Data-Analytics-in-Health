@@ -55,8 +55,7 @@ def upsert_dataframe(df: pd.DataFrame, schema: str, table: str, pk: str) -> int:
     """
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
     with engine.begin() as conn:
-        for record in records:
-            conn.execute(text(sql), record)
+        conn.execute(text(sql), records)  # single executemany round trip instead of one per row
     return len(records)
 
 

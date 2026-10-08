@@ -36,10 +36,14 @@ def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 150
         "Internal Medicine", "Pediatrics", "Surgery", "Psychiatry",
     ]
 
+    patient_lookup = patients_df.set_index("Patient_ID")[["Age", "Diabetes", "Hypertension"]].to_dict("index")
+    patient_ids = patients_df["Patient_ID"].to_numpy()
+
     admissions_list = []
     for i in range(n_admissions):
-        patient_id = np.random.choice(patients_df["Patient_ID"])
-        patient_age = patients_df[patients_df["Patient_ID"] == patient_id]["Age"].iloc[0]
+        patient_id = np.random.choice(patient_ids)
+        patient = patient_lookup[patient_id]
+        patient_age = patient["Age"]
 
         admission_date = datetime(2023, 1, 1) + timedelta(days=int(np.random.randint(1, 730)))
         discharge_date = admission_date + timedelta(days=int(np.random.randint(1, 30)))
@@ -47,6 +51,14 @@ def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 150
         dept = np.random.choice(departments)
         if patient_age < 18 and dept != "Pediatrics":
             dept = "Pediatrics"
+
+        icu = int(np.random.binomial(1, 0.15))
+        los = (discharge_date - admission_date).days
+        # Readmission risk rises with age, ICU stay, long stays and comorbidity (~12-15% base rate).
+        # A known signal lets validation check that the ML stack can learn; it is NOT clinical evidence.
+        logit = (-3.1 + 0.03 * (patient_age - 50) + 0.9 * icu + 0.05 * los
+                 + 0.6 * patient["Diabetes"] + 0.4 * patient["Hypertension"])
+        readmit = int(np.random.binomial(1, 1 / (1 + np.exp(-logit))))
 
         admissions_list.append({
             "Admission_ID": f"AD{str(i).zfill(6)}",
@@ -56,8 +68,8 @@ def generate_healthcare_big_data(n_patients: int = 5000, n_admissions: int = 150
             "Department": dept,
             "Admission_Type": np.random.choice(admission_types, p=[0.30, 0.40, 0.30]),
             "Length_of_Stay": (discharge_date - admission_date).days,
-            "ICU_Required": int(np.random.binomial(1, 0.15)),
-            "Readmission_Flag": np.random.binomial(1, 0.10),
+            "ICU_Required": icu,
+            "Readmission_Flag": readmit,
             "Mortality_Flag": 0,
             "Sepsis_Flag": 0,
         })

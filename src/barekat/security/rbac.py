@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from barekat.security.auth import decode_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 class Role(str, Enum):
@@ -27,7 +27,14 @@ ROLE_PERMISSIONS: dict[Role, set[str]] = {
 }
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+def get_current_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> dict:
+  if credentials is None:
+    # HTTPBearer's default auto_error answers 403; a missing credential is 401 per RFC 9110
+    raise HTTPException(
+      status_code=status.HTTP_401_UNAUTHORIZED,
+      detail="Not authenticated",
+      headers={"WWW-Authenticate": "Bearer"},
+    )
   try:
     payload = decode_token(credentials.credentials)
     return payload

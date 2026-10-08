@@ -45,7 +45,7 @@ def log_sync_run(
                     INSERT INTO audit.fhir_sync_runs
                         (profile_key, status, resources_fetched, events_parsed, error_messages)
                     VALUES
-                        (:profile_key, :status, :resources_fetched::jsonb, :events_parsed, :errors)
+                        (:profile_key, :status, CAST(:resources_fetched AS jsonb), :events_parsed, :errors)
                 """),
                 {
                     "profile_key": profile_key,

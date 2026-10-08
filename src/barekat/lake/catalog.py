@@ -24,7 +24,7 @@ def register_table(
             text("""
                 INSERT INTO lake.table_registry
                     (layer, table_name, format, storage_path, row_count, last_commit_at, metadata, version)
-                VALUES (:layer, :table_name, :fmt, :storage_path, :row_count, NOW(), :metadata::jsonb, 1)
+                VALUES (:layer, :table_name, :fmt, :storage_path, :row_count, NOW(), CAST(:metadata AS jsonb), 1)
                 ON CONFLICT (layer, table_name) DO UPDATE SET
                     format = EXCLUDED.format,
                     storage_path = EXCLUDED.storage_path,
