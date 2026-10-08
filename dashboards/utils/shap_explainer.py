@@ -61,8 +61,8 @@ def shap_waterfall_chart(explanation: dict) -> go.Figure:
         textposition="outside",
     ))
     fig.update_layout(
-        title="تأثیر هر عامل بر ریسک بستری مجدد (SHAP)",
-        xaxis_title="تأثیر SHAP (مثبت = افزایش ریسک)",
+        title="Effect of each factor on readmission risk (SHAP)",
+        xaxis_title="SHAP effect (positive = increased risk)",
         yaxis=dict(autorange="reversed"),
         height=400,
         margin=dict(l=20, r=20, t=40, b=20),

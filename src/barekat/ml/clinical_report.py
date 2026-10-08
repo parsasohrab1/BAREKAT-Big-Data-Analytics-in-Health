@@ -17,7 +17,7 @@ def generate_clinical_report_html(explanation: dict[str, Any], *, model_version:
 
     risk_pct = explanation.get("risk_percent", "—")
     severity = explanation.get("severity", "low")
-    severity_fa = {"critical": "بحرانی", "high": "بالا", "medium": "متوسط", "low": "پایین"}.get(severity, severity)
+    severity_fa = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low"}.get(severity, severity)
 
     risk_rows = "".join(
         _factor_row(f["label_fa"], f["value"], f["shap_value"], positive=True)
@@ -32,7 +32,7 @@ def generate_clinical_report_html(explanation: dict[str, Any], *, model_version:
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8"/>
-  <title>گزارش ریسک بستری مجدد — {escape(str(explanation.get('admission_id', '')))}</title>
+  <title>Readmission Risk Report — {escape(str(explanation.get('admission_id', '')))}</title>
   <style>
     @media print {{
       .no-print {{ display: none; }}
@@ -76,52 +76,52 @@ def generate_clinical_report_html(explanation: dict[str, Any], *, model_version:
 </head>
 <body>
   <button class="no-print" onclick="window.print()" style="padding:0.5rem 1rem;cursor:pointer;">
-    🖨️ چاپ گزارش
+    🖨️ Print report
   </button>
 
-  <h1>BAREKAT — گزارش ریسک بستری مجدد</h1>
-  <p class="meta">شناسه بستری: <strong>{escape(str(explanation.get('admission_id', '')))}</strong>
-     | بیمار: <strong>{escape(str(explanation.get('patient_id', '')))}</strong>
-     | بخش: <strong>{escape(str(explanation.get('department', '')))}</strong></p>
+  <h1>BAREKAT — Readmission Risk Report</h1>
+  <p class="meta">Admission ID: <strong>{escape(str(explanation.get('admission_id', '')))}</strong>
+     | Patient: <strong>{escape(str(explanation.get('patient_id', '')))}</strong>
+     | Department: <strong>{escape(str(explanation.get('department', '')))}</strong></p>
 
   <div class="risk-box">
-    <div>احتمال بستری مجدد (۳۰ روز)</div>
+    <div>Readmission probability (30 days)</div>
     <div class="risk-score">{escape(str(risk_pct))}</div>
-    <div>سطح خطر: <strong>{severity_fa}</strong>
-      | آستانه بخش: {explanation.get('threshold', 0):.0%}</div>
+    <div>Risk level: <strong>{severity_fa}</strong>
+      | Department threshold: {explanation.get('threshold', 0):.0%}</div>
   </div>
 
   <div class="summary">
-    <strong>خلاصه بالینی:</strong><br/>
+    <strong>Clinical summary:</strong><br/>
     {escape(explanation.get('summary_fa', ''))}
   </div>
 
-  <h2>پروفایل بیمار</h2>
+  <h2>Patient profile</h2>
   <div class="context-grid">
-    <div class="context-item">سن: {ctx.get('age', '—')}</div>
-    <div class="context-item">جنسیت: {escape(str(ctx.get('gender', '—')))}</div>
+    <div class="context-item">Age: {ctx.get('age', '—')}</div>
+    <div class="context-item">Gender: {escape(str(ctx.get('gender', '—')))}</div>
     <div class="context-item">BMI: {ctx.get('bmi', '—')}</div>
-    <div class="context-item">مدت بستری: {ctx.get('length_of_stay', '—')} روز</div>
-    <div class="context-item">دیابت: {'بله' if ctx.get('diabetes') else 'خیر'}</div>
-    <div class="context-item">فشار خون: {'بله' if ctx.get('hypertension') else 'خیر'}</div>
-    <div class="context-item">ICU: {'بله' if ctx.get('icu_required') else 'خیر'}</div>
-    <div class="context-item">تشخیص / دارو / آزمایش: {ctx.get('diagnosis_count', 0)} / {ctx.get('medication_count', 0)} / {ctx.get('lab_test_count', 0)}</div>
+    <div class="context-item">Length of stay: {ctx.get('length_of_stay', '—')} days</div>
+    <div class="context-item">Diabetes: {'Yes' if ctx.get('diabetes') else 'No'}</div>
+    <div class="context-item">Hypertension: {'Yes' if ctx.get('hypertension') else 'No'}</div>
+    <div class="context-item">ICU: {'Yes' if ctx.get('icu_required') else 'No'}</div>
+    <div class="context-item">Diagnoses / medications / tests: {ctx.get('diagnosis_count', 0)} / {ctx.get('medication_count', 0)} / {ctx.get('lab_test_count', 0)}</div>
   </div>
 
-  <h2>چرا این بیمار پرخطر است؟ (SHAP)</h2>
-  <p>عواملی که بیشترین تأثیر را در افزایش ریسک داشته‌اند:</p>
+  <h2>Why is this patient high-risk? (SHAP)</h2>
+  <p>Factors that contributed most to the increase in risk:</p>
   <table>
-    <thead><tr><th>عامل</th><th>مقدار</th><th>تأثیر بر ریسک</th></tr></thead>
+    <thead><tr><th>Factor</th><th>Value</th><th>Effect on risk</th></tr></thead>
     <tbody>{risk_rows or '<tr><td colspan="3">—</td></tr>'}</tbody>
   </table>
 
-  {"<h2>عوامل محافظتی</h2><table><thead><tr><th>عامل</th><th>مقدار</th><th>تأثیر</th></tr></thead><tbody>" + protect_rows + "</tbody></table>" if protect_rows else ""}
+  {"<h2>Protective factors</h2><table><thead><tr><th>Factor</th><th>Value</th><th>Effect</th></tr></thead><tbody>" + protect_rows + "</tbody></table>" if protect_rows else ""}
 
   <div class="disclaimer">
-    <strong>سلب مسئولیت:</strong> این گزارش توسط سیستم پشتیبان تصمیم بالینی (CDS) تولید شده و
-    جایگزین قضاوت پزشکی نیست. تصمیم نهایی با تیم درمان است.
-    <br/>مدل: readmission v{escape(str(version))} | تولید: {generated_at}
-    <br/>روش توضیح: SHAP (SHapley Additive exPlanations)
+    <strong>Disclaimer:</strong> This report was generated by a clinical decision support (CDS) system and
+    does not replace medical judgment. The final decision rests with the treatment team.
+    <br/>Model: readmission v{escape(str(version))} | Generated: {generated_at}
+    <br/>Explanation method: SHAP (SHapley Additive exPlanations)
   </div>
 </body>
 </html>"""

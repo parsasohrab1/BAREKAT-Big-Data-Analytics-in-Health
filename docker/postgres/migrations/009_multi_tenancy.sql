@@ -32,11 +32,11 @@ CREATE TABLE IF NOT EXISTS tenant.plans (
 );
 
 INSERT INTO tenant.plans (plan_id, name_fa, name_en, price_monthly_usd, quota_patients, quota_admissions, quota_api_calls, quota_storage_gb, quota_ml_jobs, features) VALUES
-    ('starter', 'استارتر', 'Starter', 299, 5000, 20000, 50000, 20, 50,
+    ('starter', 'Starter', 'Starter', 299, 5000, 20000, 50000, 20, 50,
      '{"ml": true, "fhir": false, "imaging": false, "streaming": false}'),
-    ('professional', 'حرفه‌ای', 'Professional', 899, 25000, 100000, 250000, 100, 200,
+    ('professional', 'Professional', 'Professional', 899, 25000, 100000, 250000, 100, 200,
      '{"ml": true, "fhir": true, "imaging": true, "streaming": false}'),
-    ('enterprise', 'سازمانی', 'Enterprise', 2499, 100000, 500000, 1000000, 500, 1000,
+    ('enterprise', 'Enterprise', 'Enterprise', 2499, 100000, 500000, 1000000, 500, 1000,
      '{"ml": true, "fhir": true, "imaging": true, "streaming": true, "compliance": true}')
 ON CONFLICT (plan_id) DO NOTHING;
 
@@ -88,17 +88,17 @@ CREATE TABLE IF NOT EXISTS tenant.usage_summary (
 
 -- Seed demo tenants
 INSERT INTO tenant.tenants (tenant_id, slug, name_fa, name_en, plan_id, contact_email) VALUES
-    ('default', 'default', 'بیمارستان پیش‌فرض', 'Default Hospital', 'professional', 'admin@default.local'),
-    ('tehran-general', 'tehran-general', 'بیمارستان عمومی تهران', 'Tehran General Hospital', 'enterprise', 'it@tehran-general.ir'),
-    ('isfahan-medical', 'isfahan-medical', 'مرکز پزشکی اصفهان', 'Isfahan Medical Center', 'professional', 'admin@isfahan-medical.ir'),
-    ('mashhad-university', 'mashhad-university', 'بیمارستان دانشگاهی مشهد', 'Mashhad University Hospital', 'starter', 'info@mashhad-uni.ir')
+    ('default', 'default', 'Default Hospital', 'Default Hospital', 'professional', 'admin@default.local'),
+    ('tehran-general', 'tehran-general', 'Tehran General Hospital', 'Tehran General Hospital', 'enterprise', 'it@tehran-general.ir'),
+    ('isfahan-medical', 'isfahan-medical', 'Isfahan Medical Center', 'Isfahan Medical Center', 'professional', 'admin@isfahan-medical.ir'),
+    ('mashhad-university', 'mashhad-university', 'Mashhad University Hospital', 'Mashhad University Hospital', 'starter', 'info@mashhad-uni.ir')
 ON CONFLICT (tenant_id) DO NOTHING;
 
 INSERT INTO tenant.tenant_settings (tenant_id, dashboard_title, primary_color, enabled_pages) VALUES
-    ('default', 'BAREKAT — بیمارستان پیش‌فرض', '#0891B2', '["overview","patients","admissions","diagnoses","medications","laboratory","ml","alerts","imaging","compliance"]'),
-    ('tehran-general', 'بیمارستان عمومی تهران', '#0D9488', '["overview","patients","admissions","ml","alerts","imaging","compliance"]'),
-    ('isfahan-medical', 'مرکز پزشکی اصفهان', '#7C3AED', '["overview","patients","admissions","diagnoses","ml","alerts"]'),
-    ('mashhad-university', 'بیمارستان دانشگاهی مشهد', '#DC2626', '["overview","patients","admissions","alerts"]')
+    ('default', 'BAREKAT — Default Hospital', '#0891B2', '["overview","patients","admissions","diagnoses","medications","laboratory","ml","alerts","imaging","compliance"]'),
+    ('tehran-general', 'Tehran General Hospital', '#0D9488', '["overview","patients","admissions","ml","alerts","imaging","compliance"]'),
+    ('isfahan-medical', 'Isfahan Medical Center', '#7C3AED', '["overview","patients","admissions","diagnoses","ml","alerts"]'),
+    ('mashhad-university', 'Mashhad University Hospital', '#DC2626', '["overview","patients","admissions","alerts"]')
 ON CONFLICT (tenant_id) DO NOTHING;
 
 INSERT INTO tenant.tenant_users (tenant_id, username, role, is_primary) VALUES

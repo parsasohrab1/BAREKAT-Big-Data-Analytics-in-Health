@@ -80,9 +80,9 @@ def test_clinical_report_html():
         "risk_score": 0.72,
         "threshold": 0.7,
         "severity": "medium",
-        "summary_fa": "ریسک بالا به دلیل سن و تعداد دارو.",
+        "summary_fa": "High risk due to age and number of medications.",
         "top_risk_factors": [
-            {"label_fa": "سن", "value": "75", "shap_value": 0.12},
+            {"label_fa": "Age", "value": "75", "shap_value": 0.12},
         ],
         "protective_factors": [],
         "patient_context": {
@@ -95,11 +95,11 @@ def test_clinical_report_html():
     html = generate_clinical_report_html(explanation)
     assert "ADM00001" in html
     assert "SHAP" in html
-    assert "چاپ گزارش" in html
+    assert "Print report" in html
 
 
 def test_summary_fa():
-    factors = [{"label_fa": "سن", "value": "80", "shap_value": 0.1}]
+    factors = [{"label_fa": "Age", "value": "80", "shap_value": 0.1}]
     text = _build_summary_fa(0.75, 0.7, factors)
     assert "75%" in text
-    assert "سن" in text
+    assert "Age" in text

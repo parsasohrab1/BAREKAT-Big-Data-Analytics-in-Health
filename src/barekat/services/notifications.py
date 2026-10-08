@@ -203,11 +203,11 @@ def dispatch_critical_alert(alert: dict[str, Any], tenant_id: str = "default") -
             recipients = [{"user_email": tenant_email, "phone": None, "email_enabled": True, "sms_enabled": False}]
 
     sent = {"email": 0, "sms": 0}
-    subject = f"[BAREKAT] هشدار {severity.upper()} — {alert.get('alert_type', 'alert')}"
+    subject = f"[BAREKAT] {severity.upper()} alert — {alert.get('alert_type', 'alert')}"
     body = _alert_email_html(alert, tenant_id)
     sms_text = (
         f"BAREKAT {severity}: {alert.get('alert_type')} "
-        f"بیمار {alert.get('patient_id')} — {alert.get('message', '')[:120]}"
+        f"Patient {alert.get('patient_id')} — {alert.get('message', '')[:120]}"
     )
 
     for rec in recipients:
@@ -238,15 +238,15 @@ def _alert_email_html(alert: dict[str, Any], tenant_id: str) -> str:
 <html lang="fa" dir="rtl">
 <head><meta charset="utf-8"/></head>
 <body style="font-family:Tahoma,sans-serif;max-width:600px;margin:auto">
-  <h2 style="color:#dc2626">هشدار بحرانی BAREKAT</h2>
-  <p><strong>مرکز:</strong> {tenant_id}</p>
-  <p><strong>نوع:</strong> {alert.get('alert_type', '—')}</p>
-  <p><strong>شدت:</strong> {alert.get('severity', '—')}</p>
-  <p><strong>بیمار:</strong> {alert.get('patient_id', '—')}</p>
-  <p><strong>بستری:</strong> {alert.get('admission_id', '—')}</p>
-  <p><strong>امتیاز ریسک:</strong> {alert.get('risk_score', '—')}</p>
+  <h2 style="color:#dc2626">BAREKAT Critical Alert</h2>
+  <p><strong>Center:</strong> {tenant_id}</p>
+  <p><strong>Type:</strong> {alert.get('alert_type', '—')}</p>
+  <p><strong>Severity:</strong> {alert.get('severity', '—')}</p>
+  <p><strong>Patient:</strong> {alert.get('patient_id', '—')}</p>
+  <p><strong>Admission:</strong> {alert.get('admission_id', '—')}</p>
+  <p><strong>Risk score:</strong> {alert.get('risk_score', '—')}</p>
   <p>{alert.get('message', '')}</p>
   <hr/>
-  <p style="font-size:12px;color:#64748b">این پیام خودکار است — لطفاً در داشبورد BAREKAT بررسی کنید.</p>
+  <p style="font-size:12px;color:#64748b">This is an automated message — please review it in the BAREKAT dashboard.</p>
 </body>
 </html>"""

@@ -28,7 +28,7 @@ def test_mask_recipient():
 
 def test_generate_weekly_html():
     metrics = {
-        "tenant_name": "تست",
+        "tenant_name": "Test",
         "period_start": "2026-07-06",
         "period_end": "2026-07-12",
         "admissions_total": 10,
@@ -38,7 +38,7 @@ def test_generate_weekly_html():
         "top_departments": [{"department": "Cardiology", "cnt": 5}],
     }
     html = generate_weekly_html(metrics)
-    assert "گزارش هفتگی" in html
+    assert "Weekly report" in html
     assert "Cardiology" in html
 
 

@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS analytics.department_risk_thresholds (
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
--- آستانه‌های پیش‌فرض per-department
+-- Default per-department thresholds
 INSERT INTO analytics.department_risk_thresholds (department, risk_threshold) VALUES
     ('Cardiology', 0.75),
     ('Neurology', 0.70),

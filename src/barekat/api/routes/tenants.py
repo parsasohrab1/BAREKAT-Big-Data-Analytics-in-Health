@@ -41,7 +41,7 @@ class CreateTenantRequest(BaseModel):
 def current_tenant(user: dict = Depends(get_current_user)):
     ctx = get_current_tenant()
     if not ctx:
-        return {"tenant_id": "default", "name_fa": "بیمارستان پیش‌فرض", "settings": {}}
+        return {"tenant_id": "default", "name_fa": "Default Hospital", "settings": {}}
     tenant = get_tenant(ctx.tenant_id)
     return {
         "tenant_id": ctx.tenant_id,

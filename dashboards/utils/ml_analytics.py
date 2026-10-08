@@ -143,7 +143,7 @@ def build_alerts(master: pd.DataFrame, risk_scores: pd.Series, threshold: float 
 
     alerts["severity"] = alerts["risk_score"].apply(severity)
     alerts["alert_type"] = "readmission_risk"
-    alerts["message"] = alerts["risk_score"].apply(lambda s: f"احتمال بستری مجدد: {s:.0%}")
+    alerts["message"] = alerts["risk_score"].apply(lambda s: f"Readmission probability: {s:.0%}")
     return alerts.sort_values("risk_score", ascending=False)
 
 

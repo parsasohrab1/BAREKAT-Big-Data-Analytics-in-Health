@@ -38,7 +38,7 @@ class ConnectorSyncRequest(BaseModel):
     base_url: str | None = None
     token: str | None = None
     patient_id: str | None = None
-    national_id: str | None = Field(None, description="کد ملی — Iranian national ID")
+    national_id: str | None = Field(None, description="National ID — Iranian national ID")
     persist: bool = False
     stream: bool = True
     count_per_resource: int = Field(20, ge=1, le=100)

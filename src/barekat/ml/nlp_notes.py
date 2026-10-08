@@ -12,18 +12,18 @@ from barekat.ml.registry import load_active_artifact, register_model
 
 # Keyword → ICD mapping for rule-based extraction
 ICD_KEYWORDS: dict[str, list[str]] = {
-    "E11.9": ["diabetes", "diabetic", "type 2 diabetes", "hyperglycemia", "دیابت"],
-    "I10": ["hypertension", "high blood pressure", "htn", "فشار خون"],
-    "I25.10": ["ischemic heart", "cad", "coronary", "angina", "قلب"],
-    "J44.9": ["copd", "emphysema", "chronic obstructive", "تنفس"],
-    "N18.9": ["ckd", "chronic kidney", "renal failure", "کلیه"],
-    "C50.9": ["breast cancer", "malignancy breast", "سرطان سینه"],
-    "C34.9": ["lung cancer", "lung malignancy", "سرطان ریه"],
-    "E66.9": ["obesity", "bmi elevated", "overweight", "چاقی"],
-    "F32.9": ["depression", "depressive", "mdd", "افسردگی"],
-    "M17.9": ["osteoarthritis", "knee pain", "joint degeneration", "آرتروز"],
-    "A41.9": ["sepsis", "septic", "bacteremia", "سپسیس"],
-    "R65.21": ["severe sepsis", "septic shock", "شوک سپتیک"],
+    "E11.9": ["diabetes", "diabetic", "type 2 diabetes", "hyperglycemia", "diabetes mellitus"],
+    "I10": ["hypertension", "high blood pressure", "htn", "elevated blood pressure"],
+    "I25.10": ["ischemic heart", "cad", "coronary", "angina", "cardiac"],
+    "J44.9": ["copd", "emphysema", "chronic obstructive", "respiratory"],
+    "N18.9": ["ckd", "chronic kidney", "renal failure", "kidney"],
+    "C50.9": ["breast cancer", "malignancy breast", "breast carcinoma"],
+    "C34.9": ["lung cancer", "lung malignancy", "lung carcinoma"],
+    "E66.9": ["obesity", "bmi elevated", "overweight", "adiposity"],
+    "F32.9": ["depression", "depressive", "mdd", "low mood"],
+    "M17.9": ["osteoarthritis", "knee pain", "joint degeneration", "arthrosis"],
+    "A41.9": ["sepsis", "septic", "bacteremia", "blood infection"],
+    "R65.21": ["severe sepsis", "septic shock", "septic shock state"],
 }
 
 

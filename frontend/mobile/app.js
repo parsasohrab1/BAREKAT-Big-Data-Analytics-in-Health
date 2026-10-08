@@ -19,11 +19,11 @@ async function api(path, options = {}) {
   const resp = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (resp.status === 401) {
     logout();
-    throw new Error("نشست منقضی شده");
+    throw new Error("Session expired");
   }
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
-    throw new Error(err.detail || `خطا ${resp.status}`);
+    throw new Error(err.detail || `Error ${resp.status}`);
   }
   const ct = resp.headers.get("content-type") || "";
   if (ct.includes("application/json")) return resp.json();
@@ -56,7 +56,7 @@ async function login() {
       body: JSON.stringify({ username, password }),
     });
     setToken(data.access_token);
-    $("user-role").textContent = data.role || "کاربر";
+    $("user-role").textContent = data.role || "User";
     if (data.tenant_slug) $("tenant-name").textContent = data.tenant_slug;
     showDashboard();
     await refreshAll();
@@ -77,7 +77,7 @@ async function loadAlerts() {
   const list = $("alert-list");
   list.innerHTML = "";
   if (!alerts.length) {
-    list.innerHTML = '<li class="muted" style="padding:1rem;text-align:center">هشدار فعالی نیست</li>';
+    list.innerHTML = '<li class="muted" style="padding:1rem;text-align:center">No active alerts</li>';
     return;
   }
   alerts.slice(0, 20).forEach((a) => {
@@ -86,7 +86,7 @@ async function loadAlerts() {
     li.innerHTML = `
       <div class="type">${a.severity?.toUpperCase()} — ${a.alert_type || ""}</div>
       <div class="msg">${a.message || ""}</div>
-      <div class="type">بیمار: ${a.patient_id || "—"}</div>`;
+      <div class="type">Patient: ${a.patient_id || "—"}</div>`;
     list.appendChild(li);
   });
   const critical = alerts.filter((a) => a.severity === "critical").length;

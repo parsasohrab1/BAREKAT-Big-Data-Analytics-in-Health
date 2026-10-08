@@ -11,17 +11,17 @@ from barekat.ml.readmission import ReadmissionPredictor
 from barekat.ml.thresholds import get_threshold
 
 FEATURE_LABELS_FA: dict[str, str] = {
-    "age": "سن",
-    "gender": "جنسیت",
-    "bmi": "شاخص توده بدنی (BMI)",
-    "diabetes": "دیابت",
-    "hypertension": "فشار خون بالا",
-    "length_of_stay": "مدت بستری (روز)",
-    "icu_required": "نیاز به ICU",
-    "diagnosis_count": "تعداد تشخیص",
-    "medication_count": "تعداد دارو",
-    "lab_test_count": "تعداد آزمایش",
-    "department": "بخش",
+    "age": "Age",
+    "gender": "Gender",
+    "bmi": "Body mass index (BMI)",
+    "diabetes": "Diabetes",
+    "hypertension": "Hypertension",
+    "length_of_stay": "Length of stay (days)",
+    "icu_required": "ICU required",
+    "diagnosis_count": "Number of diagnoses",
+    "medication_count": "Number of medications",
+    "lab_test_count": "Number of lab tests",
+    "department": "Department",
 }
 
 FEATURE_LABELS_EN: dict[str, str] = {
@@ -41,7 +41,7 @@ FEATURE_LABELS_EN: dict[str, str] = {
 
 def _decode_feature_value(feature: str, value: Any, encoders: dict) -> str:
     if feature in ("diabetes", "hypertension", "icu_required"):
-        return "بله" if int(value) else "خیر"
+        return "Yes" if int(value) else "No"
     if feature == "gender" and "gender" in encoders:
         le = encoders["gender"]
         try:
@@ -192,18 +192,18 @@ def _severity(risk: float) -> str:
 
 def _build_summary_fa(risk: float, threshold: float, top_factors: list[dict]) -> str:
     if risk >= threshold:
-        intro = f"این بیمار با احتمال {risk:.0%} در معرض خطر بستری مجدد است (آستانه بخش: {threshold:.0%})."
+        intro = f"This patient is at risk of readmission with a probability of {risk:.0%} (department threshold: {threshold:.0%})."
     else:
-        intro = f"ریسک بستری مجدد {risk:.0%} است — زیر آستانه بخش ({threshold:.0%})."
+        intro = f"The readmission risk is {risk:.0%} — below the department threshold ({threshold:.0%})."
 
     if not top_factors:
         return intro
 
-    reasons = "؛ ".join(
+    reasons = "; ".join(
         f"{f['label_fa']} ({f['value']})" for f in top_factors[:3] if f["shap_value"] > 0
     )
     if reasons:
-        return f"{intro} عوامل اصلی افزایش ریسک: {reasons}."
+        return f"{intro} Main factors increasing risk: {reasons}."
     return intro
 
 

@@ -8,8 +8,8 @@ from dashboards.utils.styles import render_hero
 
 def render(data, master, kpis) -> None:
     render_hero(
-        "گزارش‌های مدیریتی",
-        "گزارش هفتگی PDF/Excel، تنظیمات ایمیل/پیامک هشدار critical",
+        "Management Reports",
+        "Weekly PDF/Excel report, critical alert email/SMS settings",
     )
 
     user = get_current_user() or {}
@@ -17,7 +17,7 @@ def render(data, master, kpis) -> None:
     can_export = has_permission(role, "export")
     is_admin = role in ("admin", "platform_admin")
 
-    tab_summary, tab_prefs, tab_log = st.tabs(["گزارش هفتگی", "تنظیمات اعلان", "لاگ ارسال"])
+    tab_summary, tab_prefs, tab_log = st.tabs(["Weekly report", "Notification settings", "Delivery log"])
 
     with tab_summary:
         try:
@@ -27,56 +27,56 @@ def render(data, master, kpis) -> None:
             metrics = collect_weekly_metrics(tenant_id)
 
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("بستری هفته", metrics.get("admissions_total", 0))
-            c2.metric("بستری مجدد %", metrics.get("readmission_rate_pct", 0))
-            c3.metric("هشدار بحرانی", metrics.get("alerts_critical", 0))
-            c4.metric("میانگین LOS", metrics.get("avg_length_of_stay", 0))
+            c1.metric("Weekly admissions", metrics.get("admissions_total", 0))
+            c2.metric("Readmission %", metrics.get("readmission_rate_pct", 0))
+            c3.metric("Critical alerts", metrics.get("alerts_critical", 0))
+            c4.metric("Average LOS", metrics.get("avg_length_of_stay", 0))
 
-            st.caption(f"بازه: {metrics.get('period_start')} — {metrics.get('period_end')}")
+            st.caption(f"Period: {metrics.get('period_start')} — {metrics.get('period_end')}")
 
             if can_export:
                 col1, col2, col3 = st.columns(3)
                 excel_bytes = generate_excel_report(metrics)
                 pdf_bytes = generate_pdf_report(metrics)
                 col1.download_button(
-                    "دانلود Excel",
+                    "Download Excel",
                     data=excel_bytes,
                     file_name=f"weekly_{tenant_id}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
                 col2.download_button(
-                    "دانلود PDF",
+                    "Download PDF",
                     data=pdf_bytes,
                     file_name=f"weekly_{tenant_id}.pdf",
                     mime="application/pdf",
                 )
                 if is_admin:
-                    if col3.button("ارسال فوری به مدیران"):
+                    if col3.button("Send immediately to managers"):
                         from barekat.worker.tasks import run_weekly_reports
                         run_weekly_reports.delay()
-                        st.success("گزارش هفتگی در صف Celery قرار گرفت")
+                        st.success("The weekly report has been queued in Celery")
             else:
-                st.info("برای دانلود گزارش به نقش researcher یا admin نیاز است.")
+                st.info("Downloading the report requires the researcher or admin role.")
 
             if metrics.get("top_departments"):
-                st.markdown("#### پرترددترین بخش‌ها")
+                st.markdown("#### Busiest departments")
                 st.dataframe(metrics["top_departments"], use_container_width=True, hide_index=True)
 
         except Exception as exc:
-            st.warning(f"بارگذاری گزارش: {exc}")
+            st.warning(f"Loading report: {exc}")
 
     with tab_prefs:
         if not is_admin:
-            st.info("فقط مدیر می‌تواند تنظیمات اعلان را تغییر دهد.")
+            st.info("Only an administrator can change notification settings.")
         else:
             with st.form("notif_pref"):
-                email = st.text_input("ایمیل مدیر", placeholder="manager@hospital.ir")
-                phone = st.text_input("موبایل (پیامک)", placeholder="09121234567")
-                min_sev = st.selectbox("حداقل شدت هشدار", ["critical", "high", "medium"], index=0)
-                email_on = st.checkbox("ایمیل", value=True)
-                sms_on = st.checkbox("پیامک", value=True)
-                weekly = st.checkbox("گزارش هفتگی", value=True)
-                if st.form_submit_button("ذخیره"):
+                email = st.text_input("Manager email", placeholder="manager@hospital.ir")
+                phone = st.text_input("Mobile (SMS)", placeholder="09121234567")
+                min_sev = st.selectbox("Minimum alert severity", ["critical", "high", "medium"], index=0)
+                email_on = st.checkbox("Email", value=True)
+                sms_on = st.checkbox("SMS", value=True)
+                weekly = st.checkbox("Weekly report", value=True)
+                if st.form_submit_button("Save"):
                     try:
                         from sqlalchemy import text
                         from barekat.storage.database import engine
@@ -107,14 +107,14 @@ def render(data, master, kpis) -> None:
                                     "weekly": weekly,
                                 },
                             )
-                        st.success("تنظیمات ذخیره شد")
+                        st.success("Settings saved")
                     except Exception as exc:
                         st.error(str(exc))
 
-            st.markdown("#### PWA موبایل")
+            st.markdown("#### Mobile PWA")
             st.markdown(
-                "داشبورد موبایل: [http://localhost:8000/mobile/](http://localhost:8000/mobile/) "
-                "— قابل نصب روی iOS/Android"
+                "Mobile dashboard: [http://localhost:8000/mobile/](http://localhost:8000/mobile/) "
+                "— installable on iOS/Android"
             )
 
     with tab_log:
@@ -133,8 +133,8 @@ def render(data, master, kpis) -> None:
                 if rows:
                     st.dataframe([dict(r) for r in rows], use_container_width=True, hide_index=True)
                 else:
-                    st.info("هنوز اعلانی ارسال نشده (NOTIFICATIONS_ENABLED=false در dev)")
+                    st.info("No notification has been sent yet (NOTIFICATIONS_ENABLED=false in dev)")
             except Exception as exc:
                 st.warning(str(exc))
         else:
-            st.info("لاگ اعلان فقط برای مدیر")
+            st.info("The notification log is for administrators only")

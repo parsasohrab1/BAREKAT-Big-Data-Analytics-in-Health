@@ -42,23 +42,23 @@ from dashboards.pages import (
 )
 
 ALL_PAGES = {
-    "نمای کلی": overview_page,
-    "جمعیت بیماران": patients_page,
-    "بستری و بخش‌ها": admissions_page,
-    "تشخیص‌ها": diagnoses_page,
-    "داروها": medications_page,
-    "آزمایشگاه": laboratory_page,
-    "هوش تحلیلی ML": ml_insights_page,
-    "هشدارها": alerts_page,
-    "تصاویر پزشکی": imaging_page,
-    "انطباق و حریم خصوصی": compliance_page,
-    "مدیریت مراکز": tenant_admin_page,
-    "گزارش‌های مدیریتی": reports_page,
-    "زیرساخت": infrastructure_page,
+    "Overview": overview_page,
+    "Patient Population": patients_page,
+    "Admissions and Departments": admissions_page,
+    "Diagnoses": diagnoses_page,
+    "Medications": medications_page,
+    "Laboratory": laboratory_page,
+    "ML Analytics": ml_insights_page,
+    "Alerts": alerts_page,
+    "Medical Imaging": imaging_page,
+    "Compliance and Privacy": compliance_page,
+    "Center Management": tenant_admin_page,
+    "Management Reports": reports_page,
+    "Infrastructure": infrastructure_page,
 }
 
 
-@st.cache_data(show_spinner="در حال بارگذاری داده...")
+@st.cache_data(show_spinner="Loading data...")
 def load_dashboard_data(tenant_id: str = "default"):
     from barekat.tenant.context import TenantContext, set_current_tenant
 
@@ -90,10 +90,10 @@ def render_sidebar(master, pages: dict):
     render_user_sidebar()
     st.sidebar.divider()
 
-    page = st.sidebar.radio("منوی اصلی", list(pages.keys()), label_visibility="collapsed")
+    page = st.sidebar.radio("Main menu", list(pages.keys()), label_visibility="collapsed")
 
     st.sidebar.divider()
-    st.sidebar.markdown("### فیلترها")
+    st.sidebar.markdown("### Filters")
 
     departments = []
     genders = []
@@ -102,19 +102,19 @@ def render_sidebar(master, pages: dict):
     if not master.empty:
         if "Department" in master.columns:
             departments = st.sidebar.multiselect(
-                "بخش",
+                "Department",
                 sorted(master["Department"].dropna().unique()),
                 default=sorted(master["Department"].dropna().unique()),
             )
         if "Gender" in master.columns:
             genders = st.sidebar.multiselect(
-                "جنسیت",
+                "Gender",
                 sorted(master["Gender"].dropna().unique()),
                 default=sorted(master["Gender"].dropna().unique()),
             )
         if "Admission_Type" in master.columns:
             admission_types = st.sidebar.multiselect(
-                "نوع پذیرش",
+                "Admission type",
                 sorted(master["Admission_Type"].dropna().unique()),
                 default=sorted(master["Admission_Type"].dropna().unique()),
             )
@@ -123,9 +123,9 @@ def render_sidebar(master, pages: dict):
     source = get_active_data_source()
     st.sidebar.markdown(
         f"""
-        **راهنما**
-        - منبع داده: `{source.upper()}`
-        - هشدارها: PostgreSQL
+        **Guide**
+        - Data source: `{source.upper()}`
+        - Alerts: PostgreSQL
         - API: `localhost:8000/docs`
         """
     )
@@ -150,7 +150,7 @@ def main():
     pages = filter_pages(ALL_PAGES, user.get("role", "viewer"))
 
     if not pages:
-        st.error("نقش شما دسترسی به هیچ صفحه‌ای ندارد.")
+        st.error("Your role has no access to any page.")
         st.stop()
 
     data, master, kpis, source = load_dashboard_data(
@@ -162,7 +162,7 @@ def main():
             """
             <div class="hero-banner">
                 <h1>BAREKAT Health Analytics</h1>
-                <p>داده‌ای یافت نشد.</p>
+                <p>No data found.</p>
             </div>
             """,
             unsafe_allow_html=True,

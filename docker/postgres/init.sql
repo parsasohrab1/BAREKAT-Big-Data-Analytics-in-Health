@@ -1,12 +1,12 @@
 -- BAREKAT Health Analytics - Database Schema
--- انطباق با ساختار داده‌های بیمارستانی (EHR)
+-- Compliance with the hospital data structure (EHR)
 
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS staging;
 CREATE SCHEMA IF NOT EXISTS analytics;
 CREATE SCHEMA IF NOT EXISTS audit;
 
--- جدول بیماران
+-- Patients table
 CREATE TABLE IF NOT EXISTS raw.patients (
     patient_id      VARCHAR(20) PRIMARY KEY,
     age             INTEGER NOT NULL CHECK (age >= 0 AND age <= 150),
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS raw.patients (
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
--- جدول بستری‌ها
+-- Admissions table
 CREATE TABLE IF NOT EXISTS raw.admissions (
     admission_id        VARCHAR(20) PRIMARY KEY,
     patient_id          VARCHAR(20) NOT NULL REFERENCES raw.patients(patient_id),
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS raw.admissions (
 CREATE INDEX IF NOT EXISTS idx_admissions_patient ON raw.admissions(patient_id);
 CREATE INDEX IF NOT EXISTS idx_admissions_date ON raw.admissions(admission_date);
 
--- جدول تشخیص‌ها (ICD-10)
+-- Diagnoses table (ICD-10)
 CREATE TABLE IF NOT EXISTS raw.diagnoses (
     diagnosis_id            VARCHAR(20) PRIMARY KEY,
     admission_id            VARCHAR(20) NOT NULL REFERENCES raw.admissions(admission_id),
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS raw.diagnoses (
 CREATE INDEX IF NOT EXISTS idx_diagnoses_admission ON raw.diagnoses(admission_id);
 CREATE INDEX IF NOT EXISTS idx_diagnoses_icd ON raw.diagnoses(icd_code);
 
--- جدول داروها
+-- Medications table
 CREATE TABLE IF NOT EXISTS raw.medications (
     medication_id       VARCHAR(20) PRIMARY KEY,
     admission_id        VARCHAR(20) NOT NULL REFERENCES raw.admissions(admission_id),
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS raw.medications (
 
 CREATE INDEX IF NOT EXISTS idx_medications_admission ON raw.medications(admission_id);
 
--- جدول نتایج آزمایشگاهی
+-- Laboratory results table
 CREATE TABLE IF NOT EXISTS raw.lab_results (
     lab_id          VARCHAR(20) PRIMARY KEY,
     admission_id    VARCHAR(20) NOT NULL REFERENCES raw.admissions(admission_id),
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS raw.lab_results (
 
 CREATE INDEX IF NOT EXISTS idx_lab_results_admission ON raw.lab_results(admission_id);
 
--- یادداشت‌های بالینی (NLP)
+-- Clinical notes (NLP)
 CREATE TABLE IF NOT EXISTS raw.clinical_notes (
     note_id         VARCHAR(20) PRIMARY KEY,
     admission_id    VARCHAR(20) NOT NULL REFERENCES raw.admissions(admission_id),
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS raw.clinical_notes (
 
 CREATE INDEX IF NOT EXISTS idx_clinical_notes_admission ON raw.clinical_notes(admission_id);
 
--- علائم حیاتی (time-series)
+-- Vital signs (time-series)
 CREATE TABLE IF NOT EXISTS raw.vital_signs (
     vital_id            VARCHAR(20) PRIMARY KEY,
     admission_id        VARCHAR(20) NOT NULL REFERENCES raw.admissions(admission_id),
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS raw.vital_signs (
 CREATE INDEX IF NOT EXISTS idx_vital_signs_admission ON raw.vital_signs(admission_id);
 CREATE INDEX IF NOT EXISTS idx_vital_signs_recorded ON raw.vital_signs(recorded_at);
 
--- کاتالوگ مطالعات DICOM (PACS)
+-- DICOM studies catalog (PACS)
 CREATE TABLE IF NOT EXISTS raw.dicom_studies (
     study_id            SERIAL PRIMARY KEY,
     study_uid           VARCHAR(128) UNIQUE NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS raw.dicom_studies (
 CREATE INDEX IF NOT EXISTS idx_dicom_studies_patient ON raw.dicom_studies(patient_id);
 CREATE INDEX IF NOT EXISTS idx_dicom_studies_modality ON raw.dicom_studies(modality);
 
--- جدول کاربران و نقش‌ها (RBAC)
+-- Users and roles table (RBAC)
 CREATE TABLE IF NOT EXISTS audit.users (
     user_id         SERIAL PRIMARY KEY,
     username        VARCHAR(100) UNIQUE NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS audit.users (
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
--- لاگ دسترسی (HIPAA/GDPR compliance)
+-- Access log (HIPAA/GDPR compliance)
 CREATE TABLE IF NOT EXISTS audit.access_logs (
     log_id          BIGSERIAL PRIMARY KEY,
     user_id         INTEGER REFERENCES audit.users(user_id),
@@ -200,12 +200,12 @@ CREATE TABLE IF NOT EXISTS audit.retention_policies (
 );
 
 INSERT INTO audit.retention_policies (data_category, retention_days, regulation_ref, description_fa) VALUES
-    ('clinical_notes', 2555, 'HIPAA/GDPR/IR-MOH', 'یادداشت‌های بالینی — ۷ سال'),
-    ('lab_results', 1825, 'HIPAA/IR-MOH', 'نتایج آزمایش — ۵ سال'),
-    ('admissions', 2555, 'HIPAA/GDPR/IR-MOH', 'سوابق بستری — ۷ سال'),
-    ('dicom_studies', 3650, 'HIPAA/IR-MOH', 'تصاویر پزشکی — ۱۰ سال'),
-    ('access_logs', 2190, 'HIPAA/GDPR', 'لاگ دسترسی — ۶ سال'),
-    ('predictive_alerts', 365, 'IR-MOH', 'هشدارهای تحلیلی — ۱ سال')
+    ('clinical_notes', 2555, 'HIPAA/GDPR/IR-MOH', 'Clinical notes — 7 years'),
+    ('lab_results', 1825, 'HIPAA/IR-MOH', 'Lab results — 5 years'),
+    ('admissions', 2555, 'HIPAA/GDPR/IR-MOH', 'Admission records — 7 years'),
+    ('dicom_studies', 3650, 'HIPAA/IR-MOH', 'Medical images — 10 years'),
+    ('access_logs', 2190, 'HIPAA/GDPR', 'Access log — 6 years'),
+    ('predictive_alerts', 365, 'IR-MOH', 'Analytical alerts — 1 year')
 ON CONFLICT (data_category) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS audit.legal_holds (
@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS audit.phi_encryption_log (
     triggered_by        VARCHAR(100)
 );
 
--- جدول تحلیلی: خلاصه بستری‌ها
+-- Analytics table: admissions summary
 CREATE TABLE IF NOT EXISTS analytics.admission_summary (
     admission_id        VARCHAR(20) PRIMARY KEY,
     patient_id          VARCHAR(20),
@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS analytics.admission_summary (
     computed_at         TIMESTAMPTZ DEFAULT NOW()
 );
 
--- جدول هشدارهای پیش‌بینی‌کننده
+-- Predictive alerts table
 CREATE TABLE IF NOT EXISTS analytics.predictive_alerts (
     alert_id        BIGSERIAL PRIMARY KEY,
     patient_id      VARCHAR(20),
@@ -369,7 +369,7 @@ CREATE TABLE IF NOT EXISTS staging.etl_watermarks (
     record_count        BIGINT DEFAULT 0
 );
 
--- کاربران پیش‌فرض (رمزها: admin123 / clinician123 / researcher123 — فقط توسعه)
+-- Default users (passwords: admin123 / clinician123 / researcher123 — development only)
 INSERT INTO audit.users (username, email, password_hash, role) VALUES
     (
         'admin',

@@ -116,7 +116,7 @@ def _default_tenant_dict() -> dict[str, Any]:
     return {
         "tenant_id": DEFAULT_TENANT_ID,
         "slug": "default",
-        "name_fa": "بیمارستان پیش‌فرض",
+        "name_fa": "Default Hospital",
         "plan_id": "professional",
         "primary_color": "#0891B2",
         "enabled_pages": [],
