@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import time
 import uuid
 from datetime import datetime
 from typing import Any
@@ -25,9 +26,23 @@ def _valid_ip(value: str | None) -> str | None:
     return value
 
 
+_USER_ID_TTL = 60.0
+_user_id_cache: dict[str, tuple[float, int | None]] = {}
+
+
 def _resolve_user_id(username: str | None) -> int | None:
+    """Username -> user_id for log attribution only (not an auth decision), cached briefly."""
     if not username:
         return None
+    hit = _user_id_cache.get(username)
+    if hit and time.monotonic() - hit[0] < _USER_ID_TTL:
+        return hit[1]
+    user_id = _lookup_user_id(username)
+    _user_id_cache[username] = (time.monotonic(), user_id)
+    return user_id
+
+
+def _lookup_user_id(username: str) -> int | None:
     query = text("SELECT user_id FROM audit.users WHERE username = :username LIMIT 1")
     with engine.connect() as conn:
         row = conn.execute(query, {"username": username}).scalar()

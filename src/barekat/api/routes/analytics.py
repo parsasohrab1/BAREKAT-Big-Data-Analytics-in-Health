@@ -12,16 +12,21 @@ router = APIRouter()
 @router.get("/summary")
 def analytics_summary(user: dict = Depends(require_permission("read"))):
     with engine.connect() as conn:
+        row = conn.execute(text("""
+            SELECT
+                (SELECT COUNT(*) FROM raw.patients)   AS total_patients,
+                (SELECT COUNT(*) FROM raw.diagnoses)  AS total_diagnoses,
+                COUNT(*)                              AS total_admissions,
+                ROUND(AVG(CASE WHEN readmission_flag THEN 1.0 ELSE 0.0 END)::numeric, 4) AS readmission_rate,
+                ROUND(AVG(length_of_stay)::numeric, 2) AS avg_length_of_stay
+            FROM raw.admissions
+        """)).mappings().one()
         stats = {
-            "total_patients": conn.execute(text("SELECT COUNT(*) FROM raw.patients")).scalar() or 0,
-            "total_admissions": conn.execute(text("SELECT COUNT(*) FROM raw.admissions")).scalar() or 0,
-            "total_diagnoses": conn.execute(text("SELECT COUNT(*) FROM raw.diagnoses")).scalar() or 0,
-            "readmission_rate": conn.execute(text(
-                "SELECT ROUND(AVG(CASE WHEN readmission_flag THEN 1.0 ELSE 0.0 END)::numeric, 4) FROM raw.admissions"
-            )).scalar() or 0,
-            "avg_length_of_stay": conn.execute(text(
-                "SELECT ROUND(AVG(length_of_stay)::numeric, 2) FROM raw.admissions"
-            )).scalar() or 0,
+            "total_patients": row["total_patients"] or 0,
+            "total_admissions": row["total_admissions"] or 0,
+            "total_diagnoses": row["total_diagnoses"] or 0,
+            "readmission_rate": row["readmission_rate"] or 0,
+            "avg_length_of_stay": row["avg_length_of_stay"] or 0,
         }
 
         dept_breakdown = conn.execute(text("""
